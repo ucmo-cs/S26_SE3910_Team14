@@ -13,4 +13,7 @@ public interface EmployeeRepository extends JpaRepository<Employee, Long> {
 
     @Query("select e from Employee e join fetch e.role where e.username = :username")
     Optional<Employee> findByUsernameForAuth(@Param("username") String username);
+
+    @Query("select e from Employee e join fetch e.branch join fetch e.role where e.id = :id")
+    Optional<Employee> findByIdWithBranchAndRole(@Param("id") Long id);
 }
