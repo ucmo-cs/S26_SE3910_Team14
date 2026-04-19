@@ -9,6 +9,9 @@ import jakarta.persistence.Table;
 
 import java.time.Instant;
 
+/**
+ * Maps to {@code employees} (V1__init_schema.sql).
+ */
 @Entity
 @Table(name = "employees")
 public class Employee extends AuditableEntity {
@@ -24,7 +27,7 @@ public class Employee extends AuditableEntity {
     @Column(name = "username", nullable = false, unique = true, length = 128)
     private String username;
 
-    @Column(name = "password_hash", nullable = false)
+    @Column(name = "password_hash", nullable = false, length = 255)
     private String passwordHash;
 
     @Column(name = "first_name", nullable = false, length = 120)
@@ -80,6 +83,30 @@ public class Employee extends AuditableEntity {
         this.passwordHash = passwordHash;
     }
 
+    public String getFirstName() {
+        return firstName;
+    }
+
+    public void setFirstName(String firstName) {
+        this.firstName = firstName;
+    }
+
+    public String getLastName() {
+        return lastName;
+    }
+
+    public void setLastName(String lastName) {
+        this.lastName = lastName;
+    }
+
+    public String getWorkEmail() {
+        return workEmail;
+    }
+
+    public void setWorkEmail(String workEmail) {
+        this.workEmail = workEmail;
+    }
+
     public boolean isActive() {
         return active;
     }
@@ -94,5 +121,21 @@ public class Employee extends AuditableEntity {
 
     public void setAccountLocked(boolean accountLocked) {
         this.accountLocked = accountLocked;
+    }
+
+    public int getFailedLoginAttempts() {
+        return failedLoginAttempts;
+    }
+
+    public void setFailedLoginAttempts(int failedLoginAttempts) {
+        this.failedLoginAttempts = failedLoginAttempts;
+    }
+
+    public Instant getLastLoginAt() {
+        return lastLoginAt;
+    }
+
+    public void setLastLoginAt(Instant lastLoginAt) {
+        this.lastLoginAt = lastLoginAt;
     }
 }

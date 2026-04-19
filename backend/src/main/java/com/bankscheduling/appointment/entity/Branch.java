@@ -4,6 +4,9 @@ import jakarta.persistence.Column;
 import jakarta.persistence.Entity;
 import jakarta.persistence.Table;
 
+/**
+ * Maps to {@code branches} (V1__init_schema.sql).
+ */
 @Entity
 @Table(name = "branches")
 public class Branch extends AuditableEntity {
@@ -52,6 +55,62 @@ public class Branch extends AuditableEntity {
 
     public void setDisplayName(String displayName) {
         this.displayName = displayName;
+    }
+
+    public String getStreetLine1() {
+        return streetLine1;
+    }
+
+    public void setStreetLine1(String streetLine1) {
+        this.streetLine1 = streetLine1;
+    }
+
+    public String getStreetLine2() {
+        return streetLine2;
+    }
+
+    public void setStreetLine2(String streetLine2) {
+        this.streetLine2 = streetLine2;
+    }
+
+    public String getCity() {
+        return city;
+    }
+
+    public void setCity(String city) {
+        this.city = city;
+    }
+
+    public String getStateProvince() {
+        return stateProvince;
+    }
+
+    public void setStateProvince(String stateProvince) {
+        this.stateProvince = stateProvince;
+    }
+
+    public String getPostalCode() {
+        return postalCode;
+    }
+
+    public void setPostalCode(String postalCode) {
+        this.postalCode = postalCode;
+    }
+
+    public String getCountryCode() {
+        return countryCode;
+    }
+
+    public void setCountryCode(String countryCode) {
+        this.countryCode = countryCode;
+    }
+
+    public String getPhoneE164() {
+        return phoneE164;
+    }
+
+    public void setPhoneE164(String phoneE164) {
+        this.phoneE164 = phoneE164;
     }
 
     public boolean isActive() {

@@ -17,6 +17,6 @@ VALUES (
     'Test',
     'Manager',
     'manager@bank.com', 
-    '$2a$12$CwTycUXWue0Thq9StjUM0u1.amB/jO.2u.D.A.A.A.A.A.A.A.A.A', 
+    '$2a$10$dXJ3SW6G7P50lGmMkkmwe.20cQQubK3.HCGFGLn1EK1FPD1H3W8j6', 
     true
 );

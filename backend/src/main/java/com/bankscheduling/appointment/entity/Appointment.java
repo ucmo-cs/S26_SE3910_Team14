@@ -12,6 +12,9 @@ import jakarta.persistence.Version;
 
 import java.time.Instant;
 
+/**
+ * Maps to {@code appointments} (V1__init_schema.sql). {@code status} is stored as VARCHAR; mapped as enum string.
+ */
 @Entity
 @Table(name = "appointments")
 public class Appointment extends AuditableEntity {
@@ -103,6 +106,14 @@ public class Appointment extends AuditableEntity {
 
     public void setStatus(AppointmentStatus status) {
         this.status = status;
+    }
+
+    public String getNotes() {
+        return notes;
+    }
+
+    public void setNotes(String notes) {
+        this.notes = notes;
     }
 
     public int getOptimisticLockVersion() {

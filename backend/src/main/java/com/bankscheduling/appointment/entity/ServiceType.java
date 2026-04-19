@@ -7,6 +7,9 @@ import jakarta.persistence.JoinColumn;
 import jakarta.persistence.ManyToOne;
 import jakarta.persistence.Table;
 
+/**
+ * Maps to {@code service_types} (V1__init_schema.sql).
+ */
 @Entity
 @Table(name = "service_types")
 public class ServiceType extends AuditableEntity {
@@ -54,11 +57,27 @@ public class ServiceType extends AuditableEntity {
         this.displayName = displayName;
     }
 
+    public String getDescription() {
+        return description;
+    }
+
+    public void setDescription(String description) {
+        this.description = description;
+    }
+
     public int getDefaultDurationMinutes() {
         return defaultDurationMinutes;
     }
 
     public void setDefaultDurationMinutes(int defaultDurationMinutes) {
         this.defaultDurationMinutes = defaultDurationMinutes;
+    }
+
+    public boolean isActive() {
+        return active;
+    }
+
+    public void setActive(boolean active) {
+        this.active = active;
     }
 }
