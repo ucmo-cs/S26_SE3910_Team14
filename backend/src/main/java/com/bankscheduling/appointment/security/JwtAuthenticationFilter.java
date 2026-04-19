@@ -1,6 +1,6 @@
 package com.bankscheduling.appointment.security;
 
-import com.bankscheduling.appointment.security.jwt.JwtService;
+import com.bankscheduling.appointment.security.jwt.JwtTokenProvider;
 import io.jsonwebtoken.Claims;
 import jakarta.servlet.FilterChain;
 import jakarta.servlet.ServletException;
@@ -18,8 +18,8 @@ import org.springframework.stereotype.Component;
 import org.springframework.web.filter.OncePerRequestFilter;
 
 import java.io.IOException;
+import java.util.ArrayList;
 import java.util.Arrays;
-import java.util.Collections;
 import java.util.List;
 
 /**
@@ -28,10 +28,10 @@ import java.util.List;
 @Component
 public class JwtAuthenticationFilter extends OncePerRequestFilter {
 
-    private final JwtService jwtService;
+    private final JwtTokenProvider jwtTokenProvider;
 
-    public JwtAuthenticationFilter(JwtService jwtService) {
-        this.jwtService = jwtService;
+    public JwtAuthenticationFilter(JwtTokenProvider jwtTokenProvider) {
+        this.jwtTokenProvider = jwtTokenProvider;
     }
 
     @Override
@@ -50,12 +50,19 @@ public class JwtAuthenticationFilter extends OncePerRequestFilter {
 
         readAccessCookie(request).ifPresent(token -> {
             try {
-                Claims claims = jwtService.parseAndValidate(token);
-                if ("refresh".equals(claims.get("typ"))) {
+                Claims claims = jwtTokenProvider.parseAndValidate(token);
+                if (jwtTokenProvider.isRefreshToken(claims)) {
                     return;
                 }
                 String subject = claims.getSubject();
-                List<SimpleGrantedAuthority> authorities = Collections.singletonList(new SimpleGrantedAuthority("ROLE_EMPLOYEE"));
+                List<SimpleGrantedAuthority> authorities = new ArrayList<>(
+                        jwtTokenProvider.extractRoles(claims).stream()
+                                .map(SimpleGrantedAuthority::new)
+                                .toList()
+                );
+                if (authorities.isEmpty()) {
+                    authorities.add(new SimpleGrantedAuthority("ROLE_EMPLOYEE"));
+                }
                 UsernamePasswordAuthenticationToken authentication =
                         new UsernamePasswordAuthenticationToken(subject, null, authorities);
                 authentication.setDetails(new WebAuthenticationDetailsSource().buildDetails(request));

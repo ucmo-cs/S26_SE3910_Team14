@@ -9,29 +9,12 @@ import jakarta.persistence.Id;
 import jakarta.persistence.JoinColumn;
 import jakarta.persistence.ManyToOne;
 import jakarta.persistence.Table;
-import java.time.Instant;
 
 import java.time.Instant;
 
 @Entity
 @Table(name = "server_side_sessions")
 public class ServerSideSession {
-    
-    public void setUserAgent(String userAgent) {
-        this.userAgent = userAgent;
-    }
-
-    public void setCreatedAt(Instant createdAt) {
-        this.createdAt = createdAt;
-    }
-    
-    public String getUserAgent() {
-        return userAgent;
-    }
-
-    public Instant getCreatedAt() {
-        return createdAt;
-    }
 
     @Id
     @GeneratedValue(strategy = GenerationType.IDENTITY)
@@ -90,6 +73,14 @@ public class ServerSideSession {
         this.ipAddress = ipAddress;
     }
 
+    public String getUserAgent() {
+        return userAgent;
+    }
+
+    public void setUserAgent(String userAgent) {
+        this.userAgent = userAgent;
+    }
+
     public Instant getExpiresAt() {
         return expiresAt;
     }
@@ -104,6 +95,14 @@ public class ServerSideSession {
 
     public void setRevokedAt(Instant revokedAt) {
         this.revokedAt = revokedAt;
+    }
+
+    public Instant getCreatedAt() {
+        return createdAt;
+    }
+
+    public void setCreatedAt(Instant createdAt) {
+        this.createdAt = createdAt;
     }
 
     public Instant getLastSeenAt() {

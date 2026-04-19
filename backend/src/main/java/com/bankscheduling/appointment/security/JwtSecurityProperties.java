@@ -6,8 +6,10 @@ import org.springframework.boot.context.properties.ConfigurationProperties;
 public class JwtSecurityProperties {
 
     private String issuer = "appointment-scheduling";
+    /** Default 15 minutes */
     private int accessTokenTtlSeconds = 900;
-    private int refreshTokenTtlSeconds = 1_209_600;
+    /** Default 7 days */
+    private int refreshTokenTtlSeconds = 604_800;
     private String signingKeyBase64 = "";
 
     public String getIssuer() {

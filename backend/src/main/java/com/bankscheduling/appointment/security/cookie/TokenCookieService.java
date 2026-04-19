@@ -25,6 +25,11 @@ public class TokenCookieService {
         response.addHeader("Set-Cookie", refreshCookie(refreshToken).toString());
     }
 
+    /** Sets only the access-token cookie (used after refresh). */
+    public void attachAccessTokenCookie(HttpServletResponse response, String accessToken) {
+        response.addHeader("Set-Cookie", accessCookie(accessToken).toString());
+    }
+
     public void clearTokenCookies(HttpServletResponse response) {
         response.addHeader("Set-Cookie", deleteCookie(JwtCookieNames.ACCESS_TOKEN).toString());
         response.addHeader("Set-Cookie", deleteCookie(JwtCookieNames.REFRESH_TOKEN).toString());
