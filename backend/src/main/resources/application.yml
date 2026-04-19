@@ -2,16 +2,16 @@ spring:
   application:
     name: appointment-scheduling-api
   datasource:
-    url: jdbc:postgresql://localhost:5432/appointment_scheduling
-    username: ${DB_USERNAME:appointment}
-    password: ${DB_PASSWORD:appointment}
+    url: jdbc:postgresql://aws-1-us-east-2.pooler.supabase.com:6543/postgres?user=postgres.cybkunimttdfxhfvmxvp&password=${DB_PASSWORD}&prepareThreshold=0
+    username: postgres
+    password: ${DB_PASSWORD}
     hikari:
       maximum-pool-size: 10
       minimum-idle: 2
   jpa:
     open-in-view: false
     hibernate:
-      ddl-auto: validate
+      ddl-auto: none
     properties:
       hibernate:
         jdbc:
