@@ -13,15 +13,26 @@ export default function ActivityFeed({ items, onRefresh, refreshing }: ActivityF
 
   const filteredItems = useMemo(() => {
     return items.filter((item) => {
-      const matchesAction = actionFilter === 'ALL' || item.actionType === actionFilter;
+      const normalizedAction = item.actionType.toUpperCase();
+      const matchesAction =
+        actionFilter === 'ALL' ||
+        normalizedAction === actionFilter ||
+        normalizedAction.includes(actionFilter);
       const normalizedQuery = query.trim().toLowerCase();
       const matchesQuery =
         !normalizedQuery ||
         item.user.toLowerCase().includes(normalizedQuery) ||
-        item.details.toLowerCase().includes(normalizedQuery);
+        item.details.toLowerCase().includes(normalizedQuery) ||
+        item.actionType.toLowerCase().includes(normalizedQuery);
       return matchesAction && matchesQuery;
     });
   }, [items, query, actionFilter]);
+
+  const actionOptions = useMemo(() => {
+    const values = new Set<string>();
+    items.forEach((item) => values.add(item.actionType.toUpperCase()));
+    return Array.from(values).sort();
+  }, [items]);
 
   return (
     <section className="rounded-2xl border border-slate-200 bg-white p-6 shadow-sm">
@@ -52,10 +63,11 @@ export default function ActivityFeed({ items, onRefresh, refreshing }: ActivityF
           className="rounded-lg border border-slate-200 px-3 py-2 text-sm"
         >
           <option value="ALL">All actions</option>
-          <option value="LOGIN">Logins</option>
-          <option value="BOOKING">Bookings</option>
-          <option value="CANCELLATION">Cancellations</option>
-          <option value="STATUS_UPDATE">Status updates</option>
+          {actionOptions.map((option) => (
+            <option key={option} value={option}>
+              {option.replaceAll('_', ' ')}
+            </option>
+          ))}
         </select>
       </div>
 

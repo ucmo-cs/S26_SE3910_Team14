@@ -1,14 +1,17 @@
 package com.bankscheduling.appointment.controller;
 
 import com.bankscheduling.appointment.dto.auth.AuthStatusResponse;
+import com.bankscheduling.appointment.dto.auth.AuthProfileResponse;
 import com.bankscheduling.appointment.dto.auth.LoginRequest;
 import com.bankscheduling.appointment.security.cookie.TokenCookieService;
 import com.bankscheduling.appointment.service.AuthService;
+import com.bankscheduling.appointment.service.AuthProfileService;
 import jakarta.servlet.http.HttpServletRequest;
 import jakarta.servlet.http.HttpServletResponse;
 import jakarta.validation.Valid;
 import org.springframework.http.HttpStatus;
 import org.springframework.http.ResponseEntity;
+import org.springframework.web.bind.annotation.GetMapping;
 import org.springframework.web.bind.annotation.PostMapping;
 import org.springframework.web.bind.annotation.RequestBody;
 import org.springframework.web.bind.annotation.RequestMapping;
@@ -20,10 +23,16 @@ public class AuthController {
 
     private final AuthService authService;
     private final TokenCookieService tokenCookieService;
+    private final AuthProfileService authProfileService;
 
-    public AuthController(AuthService authService, TokenCookieService tokenCookieService) {
+    public AuthController(
+            AuthService authService,
+            TokenCookieService tokenCookieService,
+            AuthProfileService authProfileService
+    ) {
         this.authService = authService;
         this.tokenCookieService = tokenCookieService;
+        this.authProfileService = authProfileService;
     }
 
     @PostMapping("/login")
@@ -49,5 +58,10 @@ public class AuthController {
     public ResponseEntity<AuthStatusResponse> logout(HttpServletRequest request, HttpServletResponse response) {
         authService.logout(request, response);
         return ResponseEntity.ok(new AuthStatusResponse("success", "Logged out successfully"));
+    }
+
+    @GetMapping("/me")
+    public AuthProfileResponse me() {
+        return authProfileService.currentProfile();
     }
 }

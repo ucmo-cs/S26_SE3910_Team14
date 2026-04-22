@@ -7,6 +7,10 @@ type AdminDashboardProps = {
   appointments: DashboardAppointment[];
   users: DashboardUser[];
   onUsersUpdated: (users: DashboardUser[]) => void;
+  onStatusChange: (
+    appointmentId: number,
+    status: 'APPROVED' | 'COMPLETED' | 'CANCELLED',
+  ) => Promise<void>;
   activeUsers: number;
   todaysAppointments: number;
   failedBookingAttempts: number;
@@ -16,6 +20,7 @@ export default function AdminDashboard({
   appointments,
   users,
   onUsersUpdated,
+  onStatusChange,
   activeUsers,
   todaysAppointments,
   failedBookingAttempts,
@@ -100,13 +105,14 @@ export default function AdminDashboard({
               <th className="py-2 pr-4 font-medium">Customer</th>
               <th className="py-2 pr-4 font-medium">Service</th>
               <th className="py-2 pr-4 font-medium">Status</th>
+              <th className="py-2 pr-4 font-medium">Actions</th>
               <th className="py-2 font-medium">Scheduled</th>
             </tr>
           </thead>
           <tbody>
             {filteredAppointments.length === 0 ? (
               <tr>
-                <td className="py-4 text-slate-500" colSpan={5}>
+                <td className="py-4 text-slate-500" colSpan={6}>
                   No appointments match your current filters.
                 </td>
               </tr>
@@ -122,6 +128,34 @@ export default function AdminDashboard({
                     >
                       {item.status}
                     </span>
+                  </td>
+                  <td className="py-2 pr-4">
+                    <div className="flex flex-wrap gap-1">
+                      <button
+                        type="button"
+                        onClick={() => onStatusChange(item.id, 'APPROVED')}
+                        disabled={item.status !== 'REQUESTED'}
+                        className="rounded border border-emerald-200 px-2 py-1 text-xs text-emerald-700 disabled:cursor-not-allowed disabled:opacity-50"
+                      >
+                        Approve
+                      </button>
+                      <button
+                        type="button"
+                        onClick={() => onStatusChange(item.id, 'COMPLETED')}
+                        disabled={item.status !== 'APPROVED'}
+                        className="rounded border border-emerald-800 px-2 py-1 text-xs text-emerald-900 disabled:cursor-not-allowed disabled:opacity-50"
+                      >
+                        Complete
+                      </button>
+                      <button
+                        type="button"
+                        onClick={() => onStatusChange(item.id, 'CANCELLED')}
+                        disabled={item.status === 'CANCELLED' || item.status === 'COMPLETED'}
+                        className="rounded border border-red-200 px-2 py-1 text-xs text-red-700 disabled:cursor-not-allowed disabled:opacity-50"
+                      >
+                        Cancel
+                      </button>
+                    </div>
                   </td>
                   <td className="py-2 text-slate-600">{new Date(item.scheduledAt).toLocaleString()}</td>
                 </tr>
