@@ -40,13 +40,7 @@ export default function AdminDashboardPage() {
     appointmentId: number,
     status: 'APPROVED' | 'COMPLETED' | 'CANCELLED',
   ) => {
-    const current = appointments.find((item) => item.id === appointmentId);
-    if (!current) return;
-    const updated = await updateStaffAppointment(appointmentId, {
-      date: current.scheduledAt.slice(0, 10),
-      startTime: new Date(current.scheduledAt).toTimeString().slice(0, 5),
-      status,
-    });
+    const updated = await updateStaffAppointment(appointmentId, { status });
     setAppointments((prev) => prev.map((item) => (item.id === appointmentId ? updated : item)));
   };
 

@@ -32,6 +32,7 @@ import java.time.LocalTime;
 import java.time.ZoneId;
 import java.time.ZonedDateTime;
 import java.time.Instant;
+import java.time.Duration;
 
 @Service
 public class CustomerAuthService {
@@ -42,6 +43,7 @@ public class CustomerAuthService {
     private final AppointmentRepository appointmentRepository;
     private final RoleRepository roleRepository;
     private final BranchBusinessHoursRepository branchBusinessHoursRepository;
+    private final AppointmentSlotInventoryService appointmentSlotInventoryService;
 
     public CustomerAuthService(
             CustomerAccountRepository customerAccountRepository,
@@ -50,7 +52,8 @@ public class CustomerAuthService {
             JwtTokenProvider jwtTokenProvider,
             AppointmentRepository appointmentRepository,
             RoleRepository roleRepository,
-            BranchBusinessHoursRepository branchBusinessHoursRepository
+            BranchBusinessHoursRepository branchBusinessHoursRepository,
+            AppointmentSlotInventoryService appointmentSlotInventoryService
     ) {
         this.customerAccountRepository = customerAccountRepository;
         this.customerRepository = customerRepository;
@@ -59,6 +62,7 @@ public class CustomerAuthService {
         this.appointmentRepository = appointmentRepository;
         this.roleRepository = roleRepository;
         this.branchBusinessHoursRepository = branchBusinessHoursRepository;
+        this.appointmentSlotInventoryService = appointmentSlotInventoryService;
     }
 
     @Transactional
@@ -105,10 +109,11 @@ public class CustomerAuthService {
     }
 
     @Transactional(readOnly = true)
-    public List<CustomerAppointmentDto> getCurrentCustomerAppointments() {
+    public List<CustomerAppointmentDto> getCurrentCustomerAppointments(String statusFilter) {
         CustomerAccount account = getCurrentAccount();
         Long customerId = account.getCustomer().getId();
-        return appointmentRepository.findAllByCustomerIdWithAssociationsOrdered(customerId).stream()
+        AppointmentStatus status = parseOptionalStatus(statusFilter);
+        return appointmentRepository.findAllByCustomerIdAndOptionalStatus(customerId, status).stream()
                 .map(appointment -> new CustomerAppointmentDto(
                         appointment.getId(),
                         appointment.getServiceType().getDisplayName(),
@@ -135,7 +140,10 @@ public class CustomerAuthService {
 
         ZoneId branchZone = ZoneId.of(appointment.getBranch().getTimeZone());
         ZonedDateTime start = ZonedDateTime.of(request.date(), request.startTime(), branchZone);
-        int duration = appointment.getServiceType().getDefaultDurationMinutes();
+        int duration = (int) Duration.between(appointment.getScheduledStart(), appointment.getScheduledEnd()).toMinutes();
+        if (duration < 30 || duration % 30 != 0) {
+            duration = appointment.getServiceType().getDefaultDurationMinutes();
+        }
         ZonedDateTime end = start.plusMinutes(duration);
         Instant startInstant = start.toInstant();
         Instant endInstant = end.toInstant();
@@ -154,11 +162,12 @@ public class CustomerAuthService {
         if (startInstant.isBefore(Instant.now())) {
             throw new ResponseStatusException(HttpStatus.BAD_REQUEST, "Cannot book an appointment in the past");
         }
-        if (appointmentRepository.existsActiveBranchServiceStartExcluding(
+        if (appointmentRepository.existsActiveBranchServiceOverlapExcluding(
                 appointment.getBranch().getId(),
                 appointment.getServiceType().getId(),
+                appointment.getId(),
                 startInstant,
-                appointment.getId()
+                endInstant
         )) {
             throw new ResponseStatusException(HttpStatus.CONFLICT, "Selected timeslot is no longer available");
         }
@@ -181,6 +190,15 @@ public class CustomerAuthService {
         } catch (DataIntegrityViolationException ex) {
             throw new ResponseStatusException(HttpStatus.CONFLICT, "Selected timeslot is no longer available");
         }
+        appointmentSlotInventoryService.releaseSlots(saved.getId());
+        appointmentSlotInventoryService.reserveSlots(
+                saved,
+                saved.getBranch().getId(),
+                saved.getServiceType().getId(),
+                request.date(),
+                request.startTime(),
+                saved.getServiceType().getDefaultDurationMinutes()
+        );
         return new CustomerAppointmentDto(
                 saved.getId(),
                 saved.getServiceType().getDisplayName(),
@@ -200,7 +218,8 @@ public class CustomerAuthService {
             throw new ResponseStatusException(HttpStatus.FORBIDDEN, "You can only cancel your own appointments");
         }
         appointment.setStatus(AppointmentStatus.CANCELLED);
-        appointmentRepository.save(appointment);
+        Appointment saved = appointmentRepository.save(appointment);
+        appointmentSlotInventoryService.releaseSlots(saved.getId());
     }
 
     private CustomerAccount getCurrentAccount() {
@@ -274,6 +293,17 @@ public class CustomerAuthService {
         }
         if (durationMinutes < 30 || durationMinutes % 30 != 0) {
             throw new ResponseStatusException(HttpStatus.BAD_REQUEST, "Service duration is not aligned with appointment slots");
+        }
+    }
+
+    private AppointmentStatus parseOptionalStatus(String raw) {
+        if (raw == null || raw.isBlank() || "ALL".equalsIgnoreCase(raw)) {
+            return null;
+        }
+        try {
+            return AppointmentStatus.valueOf(raw.trim().toUpperCase());
+        } catch (IllegalArgumentException ex) {
+            throw new ResponseStatusException(HttpStatus.BAD_REQUEST, "Invalid status filter");
         }
     }
 }

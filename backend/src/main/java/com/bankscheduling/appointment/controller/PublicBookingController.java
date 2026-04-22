@@ -42,9 +42,10 @@ public class PublicBookingController {
     public PublicTimeslotsDto getAvailableTimes(
             @RequestParam Long branchId,
             @RequestParam Long topicId,
-            @RequestParam @DateTimeFormat(iso = DateTimeFormat.ISO.DATE) LocalDate date
+            @RequestParam @DateTimeFormat(iso = DateTimeFormat.ISO.DATE) LocalDate date,
+            @RequestParam(defaultValue = "30") int appointmentDurationMinutes
     ) {
-        return publicBookingService.getAvailableTimes(branchId, topicId, date);
+        return publicBookingService.getAvailableTimes(branchId, topicId, date, appointmentDurationMinutes);
     }
 
     @PostMapping("/book")

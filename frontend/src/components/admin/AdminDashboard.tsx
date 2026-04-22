@@ -89,7 +89,7 @@ export default function AdminDashboard({
           onChange={(event) => setStatusFilter(event.target.value)}
           className="rounded-lg border border-slate-200 px-3 py-2 text-sm"
         >
-          <option value="ALL">All statuses</option>
+          <option value="ALL">All</option>
           <option value="REQUESTED">Requested</option>
           <option value="APPROVED">Approved</option>
           <option value="COMPLETED">Completed</option>
@@ -131,33 +131,44 @@ export default function AdminDashboard({
                   </td>
                   <td className="py-2 pr-4">
                     <div className="flex flex-wrap gap-1">
-                      <button
-                        type="button"
-                        onClick={() => onStatusChange(item.id, 'APPROVED')}
-                        disabled={item.status !== 'REQUESTED'}
-                        className="rounded border border-emerald-200 px-2 py-1 text-xs text-emerald-700 disabled:cursor-not-allowed disabled:opacity-50"
-                      >
-                        Approve
-                      </button>
-                      <button
-                        type="button"
-                        onClick={() => onStatusChange(item.id, 'COMPLETED')}
-                        disabled={item.status !== 'APPROVED'}
-                        className="rounded border border-emerald-800 px-2 py-1 text-xs text-emerald-900 disabled:cursor-not-allowed disabled:opacity-50"
-                      >
-                        Complete
-                      </button>
-                      <button
-                        type="button"
-                        onClick={() => onStatusChange(item.id, 'CANCELLED')}
-                        disabled={item.status === 'CANCELLED' || item.status === 'COMPLETED'}
-                        className="rounded border border-red-200 px-2 py-1 text-xs text-red-700 disabled:cursor-not-allowed disabled:opacity-50"
-                      >
-                        Cancel
-                      </button>
+                      {item.status === 'REQUESTED' ? (
+                        <button
+                          type="button"
+                          onClick={() => onStatusChange(item.id, 'APPROVED')}
+                          className="rounded border border-emerald-200 px-2 py-1 text-xs text-emerald-700"
+                        >
+                          Approve
+                        </button>
+                      ) : null}
+                      {item.status === 'APPROVED' ? (
+                        <button
+                          type="button"
+                          onClick={() => onStatusChange(item.id, 'COMPLETED')}
+                          className="rounded border border-emerald-800 px-2 py-1 text-xs text-emerald-900"
+                        >
+                          Complete
+                        </button>
+                      ) : null}
+                      {item.status !== 'CANCELLED' && item.status !== 'COMPLETED' ? (
+                        <button
+                          type="button"
+                          onClick={() => onStatusChange(item.id, 'CANCELLED')}
+                          className="rounded border border-red-200 px-2 py-1 text-xs text-red-700"
+                        >
+                          Cancel
+                        </button>
+                      ) : null}
                     </div>
                   </td>
-                  <td className="py-2 text-slate-600">{new Date(item.scheduledAt).toLocaleString()}</td>
+                  <td className="py-2 text-slate-600">
+                    {new Date(item.scheduledAt).toLocaleString(undefined, {
+                      year: 'numeric',
+                      month: 'short',
+                      day: 'numeric',
+                      hour: '2-digit',
+                      minute: '2-digit',
+                    })}
+                  </td>
                 </tr>
               ))
             )}

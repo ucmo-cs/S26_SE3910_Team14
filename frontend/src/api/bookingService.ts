@@ -34,6 +34,7 @@ export type SubmitAppointmentPayload = {
   branch: Branch;
   date: string;
   time: string;
+  durationMinutes: 30 | 60;
   customerDetails: CustomerDetails;
 };
 
@@ -59,9 +60,10 @@ export async function getAvailableTimeslots(
   branchId: number,
   topicId: number,
   date: string,
+  appointmentDurationMinutes: 30 | 60 = 30,
 ): Promise<TimeslotApiResponse> {
   const { data } = await apiClient.get<TimeslotApiResponse>(`${bookingBasePath}/times`, {
-    params: { branchId, topicId, date },
+    params: { branchId, topicId, date, appointmentDurationMinutes },
   });
   return data;
 }
@@ -78,6 +80,7 @@ export async function submitAppointment(data: SubmitAppointmentPayload): Promise
     serviceTypeId: data.topic.id,
     date: data.date,
     startTime: data.time,
+    durationMinutes: data.durationMinutes,
   };
 
   const response = await apiClient.post<{ appointmentId: number; message: string }>(

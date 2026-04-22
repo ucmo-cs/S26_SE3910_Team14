@@ -37,6 +37,7 @@ export type BookingContextValue = {
   selectedBranch: Branch | null;
   selectedDate: string | null;
   selectedTime: string | null;
+  selectedDurationMinutes: 30 | 60;
   customerDetails: CustomerDetails;
   setCurrentStep: (step: 1 | 2 | 3 | 4) => void;
   goToNextStep: () => void;
@@ -45,6 +46,7 @@ export type BookingContextValue = {
   setSelectedBranch: (branch: Branch | null) => void;
   setSelectedDate: (date: string | null) => void;
   setSelectedTime: (time: string | null) => void;
+  setSelectedDurationMinutes: (duration: 30 | 60) => void;
   setCustomerDetails: (details: CustomerDetails) => void;
   resetBooking: () => void;
 };
@@ -63,6 +65,7 @@ export function BookingProvider({ children }: { children: ReactNode }) {
   const [selectedBranch, setSelectedBranchState] = useState<Branch | null>(null);
   const [selectedDate, setSelectedDateState] = useState<string | null>(null);
   const [selectedTime, setSelectedTimeState] = useState<string | null>(null);
+  const [selectedDurationMinutes, setSelectedDurationMinutesState] = useState<30 | 60>(30);
   const [customerDetails, setCustomerDetailsState] =
     useState<CustomerDetails>(defaultCustomerDetails);
 
@@ -71,12 +74,14 @@ export function BookingProvider({ children }: { children: ReactNode }) {
     setSelectedBranchState(null);
     setSelectedDateState(null);
     setSelectedTimeState(null);
+    setSelectedDurationMinutesState(30);
   };
 
   const setSelectedBranch = (branch: Branch | null) => {
     setSelectedBranchState(branch);
     setSelectedDateState(null);
     setSelectedTimeState(null);
+    setSelectedDurationMinutesState(30);
   };
 
   const setSelectedDate = (date: string | null) => {
@@ -98,6 +103,7 @@ export function BookingProvider({ children }: { children: ReactNode }) {
     setSelectedBranchState(null);
     setSelectedDateState(null);
     setSelectedTimeState(null);
+    setSelectedDurationMinutesState(30);
     setCustomerDetailsState(defaultCustomerDetails);
   };
 
@@ -108,6 +114,7 @@ export function BookingProvider({ children }: { children: ReactNode }) {
       selectedBranch,
       selectedDate,
       selectedTime,
+      selectedDurationMinutes,
       customerDetails,
       setCurrentStep,
       goToNextStep,
@@ -116,10 +123,19 @@ export function BookingProvider({ children }: { children: ReactNode }) {
       setSelectedBranch,
       setSelectedDate,
       setSelectedTime: setSelectedTimeState,
+      setSelectedDurationMinutes: setSelectedDurationMinutesState,
       setCustomerDetails: setCustomerDetailsState,
       resetBooking,
     }),
-    [currentStep, selectedTopic, selectedBranch, selectedDate, selectedTime, customerDetails],
+    [
+      currentStep,
+      selectedTopic,
+      selectedBranch,
+      selectedDate,
+      selectedTime,
+      selectedDurationMinutes,
+      customerDetails,
+    ],
   );
 
   return <BookingContext.Provider value={value}>{children}</BookingContext.Provider>;

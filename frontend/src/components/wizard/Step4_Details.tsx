@@ -16,6 +16,7 @@ export default function Step4Details({ onSubmitted }: Step4DetailsProps) {
     selectedBranch,
     selectedDate,
     selectedTime,
+    selectedDurationMinutes,
     customerDetails,
     setCustomerDetails,
     goToPreviousStep,
@@ -66,6 +67,7 @@ export default function Step4Details({ onSubmitted }: Step4DetailsProps) {
         branch: selectedBranch,
         date: selectedDate,
         time: selectedTime,
+        durationMinutes: selectedDurationMinutes,
         customerDetails,
       });
       onSubmitted(String(response.appointmentId));

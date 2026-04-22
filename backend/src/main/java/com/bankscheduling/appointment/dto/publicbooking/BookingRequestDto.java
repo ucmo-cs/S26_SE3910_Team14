@@ -1,6 +1,8 @@
 package com.bankscheduling.appointment.dto.publicbooking;
 
 import jakarta.validation.constraints.Email;
+import jakarta.validation.constraints.Max;
+import jakarta.validation.constraints.Min;
 import jakarta.validation.constraints.NotBlank;
 import jakarta.validation.constraints.NotNull;
 
@@ -14,6 +16,7 @@ public record BookingRequestDto(
         @NotNull Long branchId,
         @NotNull Long serviceTypeId,
         @NotNull LocalDate date,
-        @NotNull LocalTime startTime
+        @NotNull LocalTime startTime,
+        @NotNull @Min(30) @Max(60) Integer durationMinutes
 ) {
 }

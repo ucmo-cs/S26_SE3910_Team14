@@ -39,13 +39,7 @@ export default function EmployeeDashboardPage() {
 
   const setStatus = async (appointmentId: number, status: 'APPROVED' | 'COMPLETED' | 'CANCELLED') => {
     try {
-      const current = appointments.find((item) => item.id === appointmentId);
-      if (!current) return;
-      const updated = await updateStaffAppointment(appointmentId, {
-        date: current.scheduledAt.slice(0, 10),
-        startTime: new Date(current.scheduledAt).toTimeString().slice(0, 5),
-        status,
-      });
+      const updated = await updateStaffAppointment(appointmentId, { status });
       setAppointments((prev) => prev.map((item) => (item.id === appointmentId ? updated : item)));
     } catch (err) {
       setError(getFriendlyErrorMessage(err, 'Unable to update appointment status right now.'));
@@ -85,7 +79,13 @@ export default function EmployeeDashboardPage() {
                       <p className="text-sm text-slate-600">{appointment.branch}</p>
                     </div>
                     <p className="text-sm text-slate-600">
-                      {new Date(appointment.scheduledAt).toLocaleString()}
+                      {new Date(appointment.scheduledAt).toLocaleString(undefined, {
+                        year: 'numeric',
+                        month: 'short',
+                        day: 'numeric',
+                        hour: '2-digit',
+                        minute: '2-digit',
+                      })}
                     </p>
                   </div>
                   <AppointmentStatusTimeline status={appointment.status} />
@@ -147,30 +147,33 @@ export default function EmployeeDashboardPage() {
                       >
                         Edit
                       </button>
-                      <button
-                        type="button"
-                        onClick={() => setStatus(appointment.id, 'APPROVED')}
-                        disabled={appointment.status !== 'REQUESTED'}
-                        className="rounded-md border border-emerald-200 px-3 py-1.5 text-xs text-emerald-700 hover:bg-emerald-50 disabled:cursor-not-allowed disabled:opacity-50"
-                      >
-                        Approve
-                      </button>
-                      <button
-                        type="button"
-                        onClick={() => setStatus(appointment.id, 'COMPLETED')}
-                        disabled={appointment.status !== 'APPROVED'}
-                        className="rounded-md border border-emerald-800 px-3 py-1.5 text-xs text-emerald-900 hover:bg-emerald-100 disabled:cursor-not-allowed disabled:opacity-50"
-                      >
-                        Complete
-                      </button>
-                      <button
-                        type="button"
-                        onClick={() => setStatus(appointment.id, 'CANCELLED')}
-                        disabled={appointment.status === 'CANCELLED' || appointment.status === 'COMPLETED'}
-                        className="rounded-md border border-red-200 px-3 py-1.5 text-xs text-red-700 hover:bg-red-50 disabled:cursor-not-allowed disabled:opacity-50"
-                      >
-                        Cancel
-                      </button>
+                      {appointment.status === 'REQUESTED' ? (
+                        <button
+                          type="button"
+                          onClick={() => setStatus(appointment.id, 'APPROVED')}
+                          className="rounded-md border border-emerald-200 px-3 py-1.5 text-xs text-emerald-700 hover:bg-emerald-50"
+                        >
+                          Approve
+                        </button>
+                      ) : null}
+                      {appointment.status === 'APPROVED' ? (
+                        <button
+                          type="button"
+                          onClick={() => setStatus(appointment.id, 'COMPLETED')}
+                          className="rounded-md border border-emerald-800 px-3 py-1.5 text-xs text-emerald-900 hover:bg-emerald-100"
+                        >
+                          Complete
+                        </button>
+                      ) : null}
+                      {appointment.status !== 'CANCELLED' && appointment.status !== 'COMPLETED' ? (
+                        <button
+                          type="button"
+                          onClick={() => setStatus(appointment.id, 'CANCELLED')}
+                          className="rounded-md border border-red-200 px-3 py-1.5 text-xs text-red-700 hover:bg-red-50"
+                        >
+                          Cancel
+                        </button>
+                      ) : null}
                     </div>
                   )}
                 </article>
