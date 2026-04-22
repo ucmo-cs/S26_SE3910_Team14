@@ -7,16 +7,22 @@ import {
 } from 'react';
 
 export type Topic = {
-  id: string;
+  id: number;
+  code: string;
   name: string;
   description: string;
+  defaultDurationMinutes: number;
 };
 
 export type Branch = {
-  id: string;
-  name: string;
-  addressLine1: string;
-  addressLine2: string;
+  id: number;
+  displayName: string;
+  streetLine1: string;
+  streetLine2: string | null;
+  city: string | null;
+  stateProvince: string | null;
+  postalCode: string | null;
+  timeZone: string;
 };
 
 export type CustomerDetails = {
