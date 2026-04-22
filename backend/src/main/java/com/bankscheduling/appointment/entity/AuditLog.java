@@ -50,6 +50,30 @@ public class AuditLog {
     @Column(name = "correlation_id", length = 64)
     private String correlationId;
 
+    @Column(name = "actor_type", length = 16)
+    private String actorType;
+
+    @Column(name = "actor_employee_id")
+    private Long actorEmployeeId;
+
+    @Column(name = "actor_username", length = 128)
+    private String actorUsername;
+
+    @Column(name = "actor_email", length = 255)
+    private String actorEmail;
+
+    @Column(name = "actor_role", length = 128)
+    private String actorRole;
+
+    @Column(name = "request_method", length = 16)
+    private String requestMethod;
+
+    @Column(name = "request_path", length = 255)
+    private String requestPath;
+
+    @Column(name = "user_agent", length = 512)
+    private String userAgent;
+
     @Column(name = "created_at", nullable = false)
     private Instant createdAt = Instant.now();
 
@@ -105,7 +129,87 @@ public class AuditLog {
         this.performedBy = performedBy;
     }
 
+    public String getIpAddress() {
+        return ipAddress;
+    }
+
+    public void setIpAddress(String ipAddress) {
+        this.ipAddress = ipAddress;
+    }
+
+    public String getCorrelationId() {
+        return correlationId;
+    }
+
+    public void setCorrelationId(String correlationId) {
+        this.correlationId = correlationId;
+    }
+
     public Instant getCreatedAt() {
         return createdAt;
+    }
+
+    public String getActorType() {
+        return actorType;
+    }
+
+    public void setActorType(String actorType) {
+        this.actorType = actorType;
+    }
+
+    public Long getActorEmployeeId() {
+        return actorEmployeeId;
+    }
+
+    public void setActorEmployeeId(Long actorEmployeeId) {
+        this.actorEmployeeId = actorEmployeeId;
+    }
+
+    public String getActorUsername() {
+        return actorUsername;
+    }
+
+    public void setActorUsername(String actorUsername) {
+        this.actorUsername = actorUsername;
+    }
+
+    public String getActorEmail() {
+        return actorEmail;
+    }
+
+    public void setActorEmail(String actorEmail) {
+        this.actorEmail = actorEmail;
+    }
+
+    public String getActorRole() {
+        return actorRole;
+    }
+
+    public void setActorRole(String actorRole) {
+        this.actorRole = actorRole;
+    }
+
+    public String getRequestMethod() {
+        return requestMethod;
+    }
+
+    public void setRequestMethod(String requestMethod) {
+        this.requestMethod = requestMethod;
+    }
+
+    public String getRequestPath() {
+        return requestPath;
+    }
+
+    public void setRequestPath(String requestPath) {
+        this.requestPath = requestPath;
+    }
+
+    public String getUserAgent() {
+        return userAgent;
+    }
+
+    public void setUserAgent(String userAgent) {
+        this.userAgent = userAgent;
     }
 }

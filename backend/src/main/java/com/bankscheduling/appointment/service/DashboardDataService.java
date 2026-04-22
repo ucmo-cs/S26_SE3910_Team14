@@ -6,6 +6,7 @@ import com.bankscheduling.appointment.dto.dashboard.DashboardAppointmentDto;
 import com.bankscheduling.appointment.dto.dashboard.DashboardUserDto;
 import com.bankscheduling.appointment.entity.Appointment;
 import com.bankscheduling.appointment.entity.AppointmentStatus;
+import com.bankscheduling.appointment.entity.AuditLog;
 import com.bankscheduling.appointment.entity.BranchBusinessHours;
 import com.bankscheduling.appointment.entity.CustomerAccount;
 import com.bankscheduling.appointment.repository.AppointmentRepository;
@@ -69,8 +70,8 @@ public class DashboardDataService {
                         "audit-" + item.getId(),
                         item.getCreatedAt(),
                         item.getAction(),
-                        item.getPerformedBy() == null ? "system" : item.getPerformedBy().getWorkEmail(),
-                        item.getEntityType() + ":" + item.getEntityId()
+                        formatAuditUser(item),
+                        formatAuditDetails(item)
                 ))
                 .toList();
     }
@@ -179,6 +180,39 @@ public class DashboardDataService {
             return "CUSTOMER";
         }
         return raw.startsWith("ROLE_") ? raw.substring("ROLE_".length()) : raw;
+    }
+
+    private static String formatAuditUser(AuditLog item) {
+        if (item.getActorEmployeeId() != null) {
+            String username = item.getActorUsername() == null ? "unknown-user" : item.getActorUsername();
+            String email = item.getActorEmail() == null ? "n/a" : item.getActorEmail();
+            String role = item.getActorRole() == null ? "n/a" : item.getActorRole();
+            return username + " (" + email + ", " + role + ", emp#" + item.getActorEmployeeId() + ")";
+        }
+        if (item.getPerformedBy() != null) {
+            return item.getPerformedBy().getWorkEmail();
+        }
+        return "SYSTEM";
+    }
+
+    private static String formatAuditDetails(AuditLog item) {
+        StringBuilder builder = new StringBuilder();
+        builder.append(item.getEntityType()).append(":").append(item.getEntityId());
+        if (item.getRequestMethod() != null || item.getRequestPath() != null) {
+            builder.append(" | request=");
+            builder.append(item.getRequestMethod() == null ? "N/A" : item.getRequestMethod());
+            builder.append(" ").append(item.getRequestPath() == null ? "N/A" : item.getRequestPath());
+        }
+        if (item.getIpAddress() != null && !item.getIpAddress().isBlank()) {
+            builder.append(" | ip=").append(item.getIpAddress());
+        }
+        if (item.getCorrelationId() != null && !item.getCorrelationId().isBlank()) {
+            builder.append(" | corr=").append(item.getCorrelationId());
+        }
+        if (item.getUserAgent() != null && !item.getUserAgent().isBlank()) {
+            builder.append(" | ua=").append(item.getUserAgent());
+        }
+        return builder.toString();
     }
 
     private static void requireAnyRole(String... allowed) {

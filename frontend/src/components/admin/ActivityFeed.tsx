@@ -39,7 +39,9 @@ export default function ActivityFeed({ items, onRefresh, refreshing }: ActivityF
       <div className="flex flex-wrap items-center justify-between gap-3">
         <div>
           <h2 className="text-xl font-semibold text-blue-900">System Activity Viewer</h2>
-          <p className="text-sm text-slate-600">Recent login, booking, and cancellation events.</p>
+          <p className="text-sm text-slate-600">
+            Database-backed audit events with actor identity and request metadata.
+          </p>
         </div>
         <button
           type="button"
@@ -96,7 +98,9 @@ export default function ActivityFeed({ items, onRefresh, refreshing }: ActivityF
                   </td>
                   <td className="py-2 pr-4 font-medium text-blue-900">{item.actionType}</td>
                   <td className="py-2 pr-4 text-slate-700">{item.user}</td>
-                  <td className="py-2 text-slate-700">{item.details}</td>
+                  <td className="py-2 text-slate-700">
+                    <span className="break-words whitespace-pre-wrap">{item.details}</span>
+                  </td>
                 </tr>
               ))
             )}

@@ -89,7 +89,7 @@ export default function AdminDashboard({
           onChange={(event) => setStatusFilter(event.target.value)}
           className="rounded-lg border border-slate-200 px-3 py-2 text-sm"
         >
-          <option value="ALL">All statuses</option>
+          <option value="ALL">All</option>
           <option value="REQUESTED">Requested</option>
           <option value="APPROVED">Approved</option>
           <option value="COMPLETED">Completed</option>

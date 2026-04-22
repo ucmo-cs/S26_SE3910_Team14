@@ -13,7 +13,7 @@ export type DashboardAppointment = {
 export type ActivityItem = {
   id: string;
   timestamp: string;
-  actionType: 'LOGIN' | 'BOOKING' | 'CANCELLATION' | 'STATUS_UPDATE';
+  actionType: string;
   user: string;
   details: string;
 };
