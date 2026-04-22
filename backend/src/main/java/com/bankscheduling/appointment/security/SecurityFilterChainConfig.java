@@ -39,6 +39,7 @@ public class SecurityFilterChainConfig {
                         .requestMatchers("/api/public/**").permitAll()
                         .requestMatchers("/api/v1/public/**").permitAll()
                         .requestMatchers("/api/v1/auth/login", "/api/v1/auth/refresh", "/api/v1/auth/logout").permitAll()
+                        .requestMatchers("/api/v1/customer/**").hasRole("CUSTOMER")
                         .requestMatchers("/api/v1/appointments/**").authenticated()
                         .anyRequest().authenticated()
                 )

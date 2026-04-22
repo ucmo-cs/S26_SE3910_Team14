@@ -23,6 +23,15 @@ public interface AppointmentRepository extends JpaRepository<Appointment, Long> 
 
     @Query("""
             select a from Appointment a
+            join fetch a.branch
+            join fetch a.serviceType
+            where a.customer.id = :customerId
+            order by a.scheduledStart asc
+            """)
+    List<Appointment> findAllByCustomerIdWithAssociationsOrdered(@Param("customerId") Long customerId);
+
+    @Query("""
+            select a from Appointment a
             where a.branch.id = :branchId
               and a.scheduledStart < :dayEnd
               and a.scheduledEnd > :dayStart
