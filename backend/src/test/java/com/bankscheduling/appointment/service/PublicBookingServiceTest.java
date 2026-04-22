@@ -9,6 +9,7 @@ import com.bankscheduling.appointment.entity.ServiceType;
 import com.bankscheduling.appointment.repository.AppointmentRepository;
 import com.bankscheduling.appointment.repository.BranchBusinessHoursRepository;
 import com.bankscheduling.appointment.repository.BranchRepository;
+import com.bankscheduling.appointment.repository.CustomerAccountRepository;
 import com.bankscheduling.appointment.repository.CustomerRepository;
 import com.bankscheduling.appointment.repository.EmployeeRepository;
 import com.bankscheduling.appointment.repository.ServiceTypeRepository;
@@ -44,6 +45,8 @@ class PublicBookingServiceTest {
     @Mock
     private CustomerRepository customerRepository;
     @Mock
+    private CustomerAccountRepository customerAccountRepository;
+    @Mock
     private BranchBusinessHoursRepository branchBusinessHoursRepository;
     @Mock
     private AppointmentEmailService appointmentEmailService;
@@ -58,6 +61,7 @@ class PublicBookingServiceTest {
                 appointmentRepository,
                 employeeRepository,
                 customerRepository,
+                customerAccountRepository,
                 branchBusinessHoursRepository,
                 appointmentEmailService
         );

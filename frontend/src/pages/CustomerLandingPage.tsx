@@ -1,10 +1,11 @@
 import { useEffect, useState } from 'react';
 import { Link } from 'react-router-dom';
+import NavBar from '../components/NavBar';
 import { getCustomerAppointments, type CustomerAppointment } from '../api/customerService';
 import { useAuth } from '../context/AuthProvider';
 
 export default function CustomerLandingPage() {
-  const { user, logout } = useAuth();
+  const { user } = useAuth();
   const [appointments, setAppointments] = useState<CustomerAppointment[]>([]);
   const [loading, setLoading] = useState(true);
 
@@ -15,8 +16,9 @@ export default function CustomerLandingPage() {
   }, []);
 
   return (
-    <main className="min-h-screen bg-slate-100 px-4 py-8">
-      <div className="mx-auto w-full max-w-5xl space-y-6">
+    <main className="min-h-screen bg-slate-100">
+      <NavBar />
+      <div className="mx-auto w-full max-w-5xl space-y-6 px-4 py-8">
         <section className="rounded-2xl border border-slate-200 bg-white p-6 shadow-sm">
           <div className="flex flex-wrap items-center justify-between gap-3">
             <div>
@@ -30,13 +32,6 @@ export default function CustomerLandingPage() {
               >
                 Book Appointment
               </Link>
-              <button
-                type="button"
-                onClick={logout}
-                className="rounded-lg border border-slate-200 bg-white px-4 py-2 text-sm font-medium text-slate-700 hover:bg-slate-50"
-              >
-                Sign Out
-              </button>
             </div>
           </div>
         </section>

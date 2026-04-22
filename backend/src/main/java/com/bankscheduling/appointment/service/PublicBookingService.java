@@ -10,15 +10,20 @@ import com.bankscheduling.appointment.entity.AppointmentStatus;
 import com.bankscheduling.appointment.entity.Branch;
 import com.bankscheduling.appointment.entity.BranchBusinessHours;
 import com.bankscheduling.appointment.entity.Customer;
+import com.bankscheduling.appointment.entity.CustomerAccount;
 import com.bankscheduling.appointment.entity.Employee;
 import com.bankscheduling.appointment.entity.ServiceType;
 import com.bankscheduling.appointment.repository.AppointmentRepository;
 import com.bankscheduling.appointment.repository.BranchBusinessHoursRepository;
 import com.bankscheduling.appointment.repository.BranchRepository;
+import com.bankscheduling.appointment.repository.CustomerAccountRepository;
 import com.bankscheduling.appointment.repository.CustomerRepository;
 import com.bankscheduling.appointment.repository.EmployeeRepository;
 import com.bankscheduling.appointment.repository.ServiceTypeRepository;
 import org.springframework.http.HttpStatus;
+import org.springframework.security.authentication.AnonymousAuthenticationToken;
+import org.springframework.security.core.Authentication;
+import org.springframework.security.core.context.SecurityContextHolder;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 import org.springframework.web.server.ResponseStatusException;
@@ -33,7 +38,7 @@ import java.time.format.DateTimeFormatter;
 import java.util.ArrayList;
 import java.util.List;
 import java.util.Map;
-import java.util.function.Function;
+import java.util.Optional;
 import java.util.stream.Collectors;
 
 @Service
@@ -46,6 +51,7 @@ public class PublicBookingService {
     private final AppointmentRepository appointmentRepository;
     private final EmployeeRepository employeeRepository;
     private final CustomerRepository customerRepository;
+    private final CustomerAccountRepository customerAccountRepository;
     private final BranchBusinessHoursRepository branchBusinessHoursRepository;
     private final AppointmentEmailService appointmentEmailService;
 
@@ -55,6 +61,7 @@ public class PublicBookingService {
             AppointmentRepository appointmentRepository,
             EmployeeRepository employeeRepository,
             CustomerRepository customerRepository,
+            CustomerAccountRepository customerAccountRepository,
             BranchBusinessHoursRepository branchBusinessHoursRepository,
             AppointmentEmailService appointmentEmailService
     ) {
@@ -63,6 +70,7 @@ public class PublicBookingService {
         this.appointmentRepository = appointmentRepository;
         this.employeeRepository = employeeRepository;
         this.customerRepository = customerRepository;
+        this.customerAccountRepository = customerAccountRepository;
         this.branchBusinessHoursRepository = branchBusinessHoursRepository;
         this.appointmentEmailService = appointmentEmailService;
     }
@@ -165,11 +173,7 @@ public class PublicBookingService {
                 .findFirst()
                 .orElseThrow(() -> new ResponseStatusException(HttpStatus.CONFLICT, "Selected timeslot is no longer available"));
 
-        Customer customer = new Customer();
-        customer.setBranch(branch);
-        customer.setFullName(request.firstName().trim() + " " + request.lastName().trim());
-        customer.setEmail(request.email().trim());
-        customerRepository.save(customer);
+        Customer customer = resolveCustomerForBooking(branch, request);
 
         Appointment appointment = new Appointment();
         appointment.setBranch(branch);
@@ -183,6 +187,28 @@ public class PublicBookingService {
         Appointment saved = appointmentRepository.save(appointment);
         appointmentEmailService.sendBookingConfirmation(saved, branchZone);
         return new BookingResponseDto(saved.getId(), "Appointment booked successfully");
+    }
+
+    private Customer resolveCustomerForBooking(Branch branch, BookingRequestDto request) {
+        String fullName = request.firstName().trim() + " " + request.lastName().trim();
+        String normalizedEmail = request.email().trim().toLowerCase();
+        Optional<Long> accountId = getAuthenticatedCustomerAccountId();
+
+        if (accountId.isPresent()) {
+            CustomerAccount account = customerAccountRepository.findByIdWithCustomer(accountId.get())
+                    .orElseThrow(() -> new ResponseStatusException(HttpStatus.UNAUTHORIZED, "Customer account not found"));
+            Customer customer = account.getCustomer();
+            customer.setBranch(branch);
+            customer.setFullName(fullName);
+            customer.setEmail(normalizedEmail);
+            return customerRepository.save(customer);
+        }
+
+        Customer customer = new Customer();
+        customer.setBranch(branch);
+        customer.setFullName(fullName);
+        customer.setEmail(normalizedEmail);
+        return customerRepository.save(customer);
     }
 
     private PublicBranchDto toBranchDto(Branch branch) {
@@ -247,5 +273,26 @@ public class PublicBookingService {
 
     private ZonedDateTime dateTimeAtZone(LocalDate date, LocalTime time, ZoneId zoneId) {
         return ZonedDateTime.of(date, time, zoneId);
+    }
+
+    private Optional<Long> getAuthenticatedCustomerAccountId() {
+        Authentication authentication = SecurityContextHolder.getContext().getAuthentication();
+        if (authentication == null
+                || !authentication.isAuthenticated()
+                || authentication instanceof AnonymousAuthenticationToken) {
+            return Optional.empty();
+        }
+
+        boolean isCustomer = authentication.getAuthorities().stream()
+                .anyMatch(authority -> "ROLE_CUSTOMER".equals(authority.getAuthority()));
+        if (!isCustomer) {
+            return Optional.empty();
+        }
+
+        try {
+            return Optional.of(Long.parseLong(authentication.getName()));
+        } catch (NumberFormatException ex) {
+            return Optional.empty();
+        }
     }
 }

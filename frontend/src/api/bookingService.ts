@@ -1,12 +1,7 @@
-import axios from 'axios';
+import { apiClient } from './axiosConfig';
 import type { Branch, CustomerDetails, Topic } from '../context/BookingContext';
 
-const bookingClient = axios.create({
-  baseURL: import.meta.env.VITE_BOOKING_API_BASE_URL ?? 'http://localhost:8080/api/v1/public/booking',
-  headers: {
-    'Content-Type': 'application/json',
-  },
-});
+const bookingBasePath = '/v1/public/booking';
 
 type TopicApiResponse = {
   id: number;
@@ -42,7 +37,7 @@ export type SubmitAppointmentPayload = {
 };
 
 export async function getTopics(): Promise<Topic[]> {
-  const { data } = await bookingClient.get<TopicApiResponse[]>('/topics');
+  const { data } = await apiClient.get<TopicApiResponse[]>(`${bookingBasePath}/topics`);
   return data.map((topic) => ({
     id: topic.id,
     code: topic.code,
@@ -53,7 +48,7 @@ export async function getTopics(): Promise<Topic[]> {
 }
 
 export async function getBranches(topicId?: number): Promise<Branch[]> {
-  const { data } = await bookingClient.get<BranchApiResponse[]>('/branches', {
+  const { data } = await apiClient.get<BranchApiResponse[]>(`${bookingBasePath}/branches`, {
     params: topicId ? { topicId } : undefined,
   });
   return data;
@@ -64,7 +59,7 @@ export async function getAvailableTimeslots(
   topicId: number,
   date: string,
 ): Promise<TimeslotApiResponse> {
-  const { data } = await bookingClient.get<TimeslotApiResponse>('/times', {
+  const { data } = await apiClient.get<TimeslotApiResponse>(`${bookingBasePath}/times`, {
     params: { branchId, topicId, date },
   });
   return data;
@@ -84,6 +79,9 @@ export async function submitAppointment(data: SubmitAppointmentPayload): Promise
     startTime: data.time,
   };
 
-  const response = await bookingClient.post<{ appointmentId: number; message: string }>('/book', payload);
+  const response = await apiClient.post<{ appointmentId: number; message: string }>(
+    `${bookingBasePath}/book`,
+    payload,
+  );
   return response.data;
 }

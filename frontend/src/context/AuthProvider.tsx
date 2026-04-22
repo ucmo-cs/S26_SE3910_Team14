@@ -12,6 +12,8 @@ export type AuthStatus = 'loading' | 'authenticated' | 'unauthenticated';
 
 export type CustomerUser = {
   id: number;
+  firstName: string;
+  lastName: string;
   fullName: string;
   email: string;
 };

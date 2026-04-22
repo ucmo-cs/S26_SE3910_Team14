@@ -62,7 +62,7 @@ public class CustomerAuthService {
         customerAccountRepository.save(account);
 
         String token = jwtTokenProvider.createAccessToken(account.getId(), List.of("ROLE_CUSTOMER"));
-        return new CustomerAuthResponse(token, new CustomerProfileDto(customer.getId(), customer.getFullName(), customer.getEmail()));
+        return new CustomerAuthResponse(token, toCustomerProfile(customer));
     }
 
     @Transactional(readOnly = true)
@@ -76,14 +76,14 @@ public class CustomerAuthService {
 
         Customer customer = account.getCustomer();
         String token = jwtTokenProvider.createAccessToken(account.getId(), List.of("ROLE_CUSTOMER"));
-        return new CustomerAuthResponse(token, new CustomerProfileDto(customer.getId(), customer.getFullName(), customer.getEmail()));
+        return new CustomerAuthResponse(token, toCustomerProfile(customer));
     }
 
     @Transactional(readOnly = true)
     public CustomerProfileDto getCurrentCustomerProfile() {
         CustomerAccount account = getCurrentAccount();
         Customer customer = account.getCustomer();
-        return new CustomerProfileDto(customer.getId(), customer.getFullName(), customer.getEmail());
+        return toCustomerProfile(customer);
     }
 
     @Transactional(readOnly = true)
@@ -121,5 +121,24 @@ public class CustomerAuthService {
 
     private String normalizeEmail(String email) {
         return email == null ? "" : email.trim().toLowerCase();
+    }
+
+    private CustomerProfileDto toCustomerProfile(Customer customer) {
+        String fullName = customer.getFullName() == null ? "" : customer.getFullName().trim();
+        String firstName = fullName;
+        String lastName = "";
+        int firstSpace = fullName.indexOf(' ');
+        if (firstSpace > 0) {
+            firstName = fullName.substring(0, firstSpace).trim();
+            lastName = fullName.substring(firstSpace + 1).trim();
+        }
+
+        return new CustomerProfileDto(
+                customer.getId(),
+                firstName,
+                lastName,
+                fullName,
+                customer.getEmail()
+        );
     }
 }
