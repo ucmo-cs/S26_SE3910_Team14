@@ -26,6 +26,7 @@ type TimeslotApiResponse = {
   timeZone: string;
   slotDurationMinutes: number;
   slots: string[];
+  unavailableSlots?: string[];
 };
 
 export type SubmitAppointmentPayload = {

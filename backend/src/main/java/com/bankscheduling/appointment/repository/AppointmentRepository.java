@@ -7,6 +7,7 @@ import org.springframework.data.repository.query.Param;
 
 import java.time.Instant;
 import java.util.List;
+import java.util.Optional;
 
 public interface AppointmentRepository extends JpaRepository<Appointment, Long> {
 
@@ -42,6 +43,16 @@ public interface AppointmentRepository extends JpaRepository<Appointment, Long> 
 
     @Query("""
             select a from Appointment a
+            join fetch a.branch
+            join fetch a.customer
+            join fetch a.employee
+            join fetch a.serviceType
+            where a.id = :appointmentId
+            """)
+    Optional<Appointment> findByIdWithAssociations(@Param("appointmentId") Long appointmentId);
+
+    @Query("""
+            select a from Appointment a
             where a.branch.id = :branchId
               and a.scheduledStart < :dayEnd
               and a.scheduledEnd > :dayStart
@@ -62,6 +73,21 @@ public interface AppointmentRepository extends JpaRepository<Appointment, Long> 
             """)
     boolean existsEmployeeOverlap(
             @Param("employeeId") Long employeeId,
+            @Param("scheduledStart") Instant scheduledStart,
+            @Param("scheduledEnd") Instant scheduledEnd
+    );
+
+    @Query("""
+            select count(a) > 0 from Appointment a
+            where a.employee.id = :employeeId
+              and a.id <> :appointmentId
+              and a.status <> com.bankscheduling.appointment.entity.AppointmentStatus.CANCELLED
+              and a.scheduledStart < :scheduledEnd
+              and a.scheduledEnd > :scheduledStart
+            """)
+    boolean existsEmployeeOverlapExcluding(
+            @Param("employeeId") Long employeeId,
+            @Param("appointmentId") Long appointmentId,
             @Param("scheduledStart") Instant scheduledStart,
             @Param("scheduledEnd") Instant scheduledEnd
     );

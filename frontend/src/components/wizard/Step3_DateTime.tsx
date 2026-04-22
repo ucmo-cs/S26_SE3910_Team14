@@ -25,6 +25,7 @@ function formatSlotLabel(slot: string): string {
 
 export default function Step3DateTime() {
   const [slots, setSlots] = useState<string[]>([]);
+  const [unavailableSlots, setUnavailableSlots] = useState<string[]>([]);
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState('');
   const [branchTimeZone, setBranchTimeZone] = useState('');
@@ -47,6 +48,7 @@ export default function Step3DateTime() {
   useEffect(() => {
     if (!selectedBranch || !selectedTopic || !selectedDate) {
       setSlots([]);
+      setUnavailableSlots([]);
       return;
     }
 
@@ -55,6 +57,7 @@ export default function Step3DateTime() {
     getAvailableTimeslots(selectedBranch.id, selectedTopic.id, selectedDate)
       .then((result) => {
         setSlots(result.slots);
+        setUnavailableSlots(result.unavailableSlots ?? []);
         setBranchTimeZone(result.timeZone);
       })
       .catch(() => setError('Unable to load timeslots for this date. Please pick another date or retry.'))
@@ -131,18 +134,26 @@ export default function Step3DateTime() {
           </div>
         ) : (
           <div className="grid grid-cols-2 gap-3 sm:grid-cols-3 md:grid-cols-4">
-            {slots.map((slot) => {
+            {Array.from({ length: 16 }, (_, index) => {
+              const hour = 9 + Math.floor(index / 2);
+              const minute = index % 2 === 0 ? '00' : '30';
+              const slot = `${`${hour}`.padStart(2, '0')}:${minute}`;
+              const isAvailable = slots.includes(slot);
+              const isUnavailable = unavailableSlots.includes(slot) || !isAvailable;
               const isSelected = selectedTime === slot;
               return (
                 <button
                   type="button"
                   key={slot}
+                  disabled={!isAvailable}
                   onClick={() => handleTimePick(slot)}
                   className={`rounded-full border px-3 py-2 text-sm transition ${
                     isSelected
                       ? 'border-blue-900 bg-blue-900 text-white'
-                      : 'border-slate-200 bg-white text-slate-700 hover:border-blue-900'
-                  }`}
+                      : isUnavailable
+                        ? 'border-slate-200 bg-slate-100 text-slate-400'
+                        : 'border-slate-200 bg-white text-slate-700 hover:border-blue-900'
+                  } disabled:cursor-not-allowed`}
                 >
                   {formatSlotLabel(slot)}
                 </button>

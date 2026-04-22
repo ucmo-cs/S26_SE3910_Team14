@@ -1,9 +1,15 @@
 package com.bankscheduling.appointment.controller;
 
+import com.bankscheduling.appointment.dto.appointment.CustomerAppointmentUpdateRequest;
 import com.bankscheduling.appointment.dto.customerauth.CustomerAppointmentDto;
 import com.bankscheduling.appointment.dto.customerauth.CustomerProfileDto;
 import com.bankscheduling.appointment.service.CustomerAuthService;
+import jakarta.validation.Valid;
+import org.springframework.web.bind.annotation.DeleteMapping;
 import org.springframework.web.bind.annotation.GetMapping;
+import org.springframework.web.bind.annotation.PathVariable;
+import org.springframework.web.bind.annotation.PutMapping;
+import org.springframework.web.bind.annotation.RequestBody;
 import org.springframework.web.bind.annotation.RequestMapping;
 import org.springframework.web.bind.annotation.RestController;
 
@@ -26,5 +32,18 @@ public class CustomerPortalController {
     @GetMapping("/appointments")
     public List<CustomerAppointmentDto> appointments() {
         return customerAuthService.getCurrentCustomerAppointments();
+    }
+
+    @PutMapping("/appointments/{appointmentId}")
+    public CustomerAppointmentDto updateAppointment(
+            @PathVariable Long appointmentId,
+            @Valid @RequestBody CustomerAppointmentUpdateRequest request
+    ) {
+        return customerAuthService.updateCurrentCustomerAppointment(appointmentId, request);
+    }
+
+    @DeleteMapping("/appointments/{appointmentId}")
+    public void deleteAppointment(@PathVariable Long appointmentId) {
+        customerAuthService.deleteCurrentCustomerAppointment(appointmentId);
     }
 }

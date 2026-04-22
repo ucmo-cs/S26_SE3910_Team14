@@ -2,7 +2,12 @@ import { useEffect, useState } from 'react';
 import { Link } from 'react-router-dom';
 import AppointmentStatusTimeline from '../components/appointments/AppointmentStatusTimeline';
 import NavBar from '../components/NavBar';
-import { getCustomerAppointments, type CustomerAppointment } from '../api/customerService';
+import {
+  deleteCustomerAppointment,
+  getCustomerAppointments,
+  updateCustomerAppointment,
+  type CustomerAppointment,
+} from '../api/customerService';
 import { useAuth } from '../context/AuthProvider';
 import { getFriendlyErrorMessage } from '../utils/httpError';
 
@@ -11,6 +16,9 @@ export default function CustomerLandingPage() {
   const [appointments, setAppointments] = useState<CustomerAppointment[]>([]);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState('');
+  const [editingId, setEditingId] = useState<number | null>(null);
+  const [editDate, setEditDate] = useState('');
+  const [editTime, setEditTime] = useState('09:00');
 
   useEffect(() => {
     getCustomerAppointments()
@@ -20,6 +28,25 @@ export default function CustomerLandingPage() {
       )
       .finally(() => setLoading(false));
   }, []);
+
+  const handleDelete = async (appointmentId: number) => {
+    try {
+      await deleteCustomerAppointment(appointmentId);
+      setAppointments((prev) => prev.filter((item) => item.appointmentId !== appointmentId));
+    } catch (err) {
+      setError(getFriendlyErrorMessage(err, 'Unable to delete this appointment right now.'));
+    }
+  };
+
+  const handleSave = async (appointmentId: number) => {
+    try {
+      const updated = await updateCustomerAppointment(appointmentId, { date: editDate, startTime: editTime });
+      setAppointments((prev) => prev.map((item) => (item.appointmentId === appointmentId ? updated : item)));
+      setEditingId(null);
+    } catch (err) {
+      setError(getFriendlyErrorMessage(err, 'Unable to update this appointment right now.'));
+    }
+  };
 
   return (
     <main className="min-h-screen bg-slate-100">
@@ -66,6 +93,57 @@ export default function CustomerLandingPage() {
                     {new Date(appointment.scheduledEnd).toLocaleTimeString()}
                   </p>
                   <AppointmentStatusTimeline status={appointment.status} />
+                  {editingId === appointment.appointmentId ? (
+                    <div className="mt-3 flex flex-wrap items-center gap-2">
+                      <input
+                        type="date"
+                        value={editDate}
+                        onChange={(event) => setEditDate(event.target.value)}
+                        className="rounded-md border border-slate-200 px-2 py-1 text-sm"
+                      />
+                      <input
+                        type="time"
+                        value={editTime}
+                        onChange={(event) => setEditTime(event.target.value)}
+                        className="rounded-md border border-slate-200 px-2 py-1 text-sm"
+                      />
+                      <button
+                        type="button"
+                        onClick={() => handleSave(appointment.appointmentId)}
+                        className="rounded-md bg-blue-900 px-3 py-1.5 text-xs font-medium text-white"
+                      >
+                        Save
+                      </button>
+                      <button
+                        type="button"
+                        onClick={() => setEditingId(null)}
+                        className="rounded-md border border-slate-200 px-3 py-1.5 text-xs text-slate-700"
+                      >
+                        Cancel
+                      </button>
+                    </div>
+                  ) : (
+                    <div className="mt-3 flex gap-2">
+                      <button
+                        type="button"
+                        onClick={() => {
+                          setEditingId(appointment.appointmentId);
+                          setEditDate(appointment.scheduledStart.slice(0, 10));
+                          setEditTime(new Date(appointment.scheduledStart).toTimeString().slice(0, 5));
+                        }}
+                        className="rounded-md border border-slate-200 px-3 py-1.5 text-xs text-slate-700 hover:bg-slate-50"
+                      >
+                        Edit
+                      </button>
+                      <button
+                        type="button"
+                        onClick={() => handleDelete(appointment.appointmentId)}
+                        className="rounded-md border border-red-200 px-3 py-1.5 text-xs text-red-700 hover:bg-red-50"
+                      >
+                        Delete
+                      </button>
+                    </div>
+                  )}
                 </article>
               ))}
             </div>

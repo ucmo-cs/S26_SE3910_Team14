@@ -5,6 +5,9 @@ import com.bankscheduling.appointment.dto.customerauth.CustomerAuthRequest;
 import com.bankscheduling.appointment.dto.customerauth.CustomerAuthResponse;
 import com.bankscheduling.appointment.dto.customerauth.CustomerProfileDto;
 import com.bankscheduling.appointment.dto.customerauth.CustomerRegisterRequest;
+import com.bankscheduling.appointment.dto.appointment.CustomerAppointmentUpdateRequest;
+import com.bankscheduling.appointment.entity.Appointment;
+import com.bankscheduling.appointment.entity.AppointmentStatus;
 import com.bankscheduling.appointment.entity.Customer;
 import com.bankscheduling.appointment.entity.CustomerAccount;
 import com.bankscheduling.appointment.entity.Role;
@@ -22,6 +25,9 @@ import org.springframework.transaction.annotation.Transactional;
 import org.springframework.web.server.ResponseStatusException;
 
 import java.util.List;
+import java.time.LocalTime;
+import java.time.ZoneId;
+import java.time.ZonedDateTime;
 
 @Service
 public class CustomerAuthService {
@@ -107,6 +113,60 @@ public class CustomerAuthService {
                 .toList();
     }
 
+    @Transactional
+    public CustomerAppointmentDto updateCurrentCustomerAppointment(Long appointmentId, CustomerAppointmentUpdateRequest request) {
+        CustomerAccount account = getCurrentAccount();
+        Appointment appointment = appointmentRepository.findByIdWithAssociations(appointmentId)
+                .orElseThrow(() -> new ResponseStatusException(HttpStatus.NOT_FOUND, "Appointment not found"));
+
+        if (!appointment.getCustomer().getId().equals(account.getCustomer().getId())) {
+            throw new ResponseStatusException(HttpStatus.FORBIDDEN, "You can only update your own appointments");
+        }
+        if (appointment.getStatus() == AppointmentStatus.CANCELLED) {
+            throw new ResponseStatusException(HttpStatus.CONFLICT, "Cancelled appointments cannot be edited");
+        }
+
+        ZoneId branchZone = ZoneId.of(appointment.getBranch().getTimeZone());
+        ZonedDateTime start = ZonedDateTime.of(request.date(), request.startTime(), branchZone);
+        int duration = appointment.getServiceType().getDefaultDurationMinutes();
+        ZonedDateTime end = start.plusMinutes(duration);
+
+        validateNineToFiveWindow(request.startTime(), end.toLocalTime());
+        if (appointmentRepository.existsEmployeeOverlapExcluding(
+                appointment.getEmployee().getId(),
+                appointment.getId(),
+                start.toInstant(),
+                end.toInstant()
+        )) {
+            throw new ResponseStatusException(HttpStatus.CONFLICT, "Selected timeslot is no longer available");
+        }
+
+        appointment.setScheduledStart(start.toInstant());
+        appointment.setScheduledEnd(end.toInstant());
+        appointment.setNotes(request.notes());
+        appointment.setStatus(AppointmentStatus.SCHEDULED);
+        Appointment saved = appointmentRepository.save(appointment);
+        return new CustomerAppointmentDto(
+                saved.getId(),
+                saved.getServiceType().getDisplayName(),
+                saved.getBranch().getDisplayName(),
+                saved.getScheduledStart(),
+                saved.getScheduledEnd(),
+                saved.getStatus().name()
+        );
+    }
+
+    @Transactional
+    public void deleteCurrentCustomerAppointment(Long appointmentId) {
+        CustomerAccount account = getCurrentAccount();
+        Appointment appointment = appointmentRepository.findByIdWithAssociations(appointmentId)
+                .orElseThrow(() -> new ResponseStatusException(HttpStatus.NOT_FOUND, "Appointment not found"));
+        if (!appointment.getCustomer().getId().equals(account.getCustomer().getId())) {
+            throw new ResponseStatusException(HttpStatus.FORBIDDEN, "You can only delete your own appointments");
+        }
+        appointmentRepository.delete(appointment);
+    }
+
     private CustomerAccount getCurrentAccount() {
         Authentication authentication = SecurityContextHolder.getContext().getAuthentication();
         if (authentication == null || authentication.getName() == null) {
@@ -164,5 +224,11 @@ public class CustomerAuthService {
             return "CUSTOMER";
         }
         return roleName.startsWith("ROLE_") ? roleName.substring("ROLE_".length()) : roleName;
+    }
+
+    private void validateNineToFiveWindow(LocalTime start, LocalTime end) {
+        if (start.isBefore(LocalTime.of(9, 0)) || end.isAfter(LocalTime.of(17, 0))) {
+            throw new ResponseStatusException(HttpStatus.BAD_REQUEST, "Appointments must be between 9:00 AM and 5:00 PM");
+        }
     }
 }

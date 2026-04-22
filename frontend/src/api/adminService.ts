@@ -55,3 +55,18 @@ export async function toggleUserLock(
     throw error;
   }
 }
+
+export async function updateStaffAppointment(
+  appointmentId: number,
+  payload: { date: string; startTime: string; status?: string; notes?: string },
+): Promise<DashboardAppointment> {
+  const { data } = await apiClient.patch<DashboardAppointment>(
+    `/v1/dashboard/appointments/${appointmentId}`,
+    payload,
+  );
+  return data;
+}
+
+export async function deleteStaffAppointment(appointmentId: number): Promise<void> {
+  await apiClient.delete(`/v1/dashboard/appointments/${appointmentId}`);
+}
