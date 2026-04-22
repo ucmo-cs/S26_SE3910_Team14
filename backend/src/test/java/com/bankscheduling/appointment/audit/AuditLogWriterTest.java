@@ -4,6 +4,7 @@ import com.bankscheduling.appointment.entity.AuditAction;
 import com.bankscheduling.appointment.entity.AuditLog;
 import com.bankscheduling.appointment.entity.Branch;
 import com.bankscheduling.appointment.repository.AuditLogRepository;
+import com.bankscheduling.appointment.repository.CustomerAccountRepository;
 import com.bankscheduling.appointment.repository.EmployeeRepository;
 import org.junit.jupiter.api.Test;
 import org.junit.jupiter.api.extension.ExtendWith;
@@ -23,6 +24,9 @@ class AuditLogWriterTest {
 
     @Mock
     private EmployeeRepository employeeRepository;
+
+    @Mock
+    private CustomerAccountRepository customerAccountRepository;
 
     @InjectMocks
     private AuditLogWriter auditLogWriter;

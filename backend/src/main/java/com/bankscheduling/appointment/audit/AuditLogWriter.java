@@ -3,8 +3,10 @@ package com.bankscheduling.appointment.audit;
 import com.bankscheduling.appointment.entity.AuditAction;
 import com.bankscheduling.appointment.entity.AuditLog;
 import com.bankscheduling.appointment.entity.AuditableEntity;
+import com.bankscheduling.appointment.entity.CustomerAccount;
 import com.bankscheduling.appointment.entity.Employee;
 import com.bankscheduling.appointment.repository.AuditLogRepository;
+import com.bankscheduling.appointment.repository.CustomerAccountRepository;
 import com.bankscheduling.appointment.repository.EmployeeRepository;
 import jakarta.servlet.http.HttpServletRequest;
 import org.springframework.security.core.Authentication;
@@ -27,10 +29,16 @@ public class AuditLogWriter {
 
     private final AuditLogRepository auditLogRepository;
     private final EmployeeRepository employeeRepository;
+    private final CustomerAccountRepository customerAccountRepository;
 
-    public AuditLogWriter(AuditLogRepository auditLogRepository, EmployeeRepository employeeRepository) {
+    public AuditLogWriter(
+            AuditLogRepository auditLogRepository,
+            EmployeeRepository employeeRepository,
+            CustomerAccountRepository customerAccountRepository
+    ) {
         this.auditLogRepository = auditLogRepository;
         this.employeeRepository = employeeRepository;
+        this.customerAccountRepository = customerAccountRepository;
     }
 
     /**
@@ -74,11 +82,7 @@ public class AuditLogWriter {
 
         Optional<Employee> actor = employeeRepository.findById(employeeId);
         if (actor.isEmpty()) {
-            row.setActorType("AUTHENTICATED");
-            row.setActorUsername(String.valueOf(authentication.getPrincipal()));
-            row.setActorRole(authentication.getAuthorities().stream()
-                    .map(GrantedAuthority::getAuthority)
-                    .collect(Collectors.joining(",")));
+            populateCustomerActorMetadata(row, employeeId, authentication);
             return;
         }
 
@@ -91,6 +95,26 @@ public class AuditLogWriter {
                     .map(GrantedAuthority::getAuthority)
                     .collect(Collectors.joining(",")));
         }
+    }
+
+    private void populateCustomerActorMetadata(AuditLog row, Long principalId, Authentication authentication) {
+        Optional<CustomerAccount> customerActor = customerAccountRepository.findByIdWithCustomer(principalId);
+        if (customerActor.isPresent()) {
+            CustomerAccount account = customerActor.get();
+            row.setActorType("CUSTOMER");
+            row.setActorUsername(account.getEmailNormalized());
+            row.setActorEmail(account.getEmailNormalized());
+            if (account.getRole() != null && account.getRole().getName() != null) {
+                row.setActorRole(account.getRole().getName());
+                return;
+            }
+        }
+
+        row.setActorType("AUTHENTICATED");
+        row.setActorUsername(String.valueOf(authentication.getPrincipal()));
+        row.setActorRole(authentication.getAuthorities().stream()
+                .map(GrantedAuthority::getAuthority)
+                .collect(Collectors.joining(",")));
     }
 
     private void hydrateActor(AuditLog row, Employee employee, Authentication authentication) {

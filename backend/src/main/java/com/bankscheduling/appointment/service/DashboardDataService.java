@@ -183,6 +183,9 @@ public class DashboardDataService {
     }
 
     private static String formatAuditUser(AuditLog item) {
+        if (item.getActorEmail() != null && !item.getActorEmail().isBlank()) {
+            return item.getActorEmail();
+        }
         if (item.getActorEmployeeId() != null) {
             String username = item.getActorUsername() == null ? "unknown-user" : item.getActorUsername();
             String email = item.getActorEmail() == null ? "n/a" : item.getActorEmail();
@@ -210,9 +213,66 @@ public class DashboardDataService {
             builder.append(" | corr=").append(item.getCorrelationId());
         }
         if (item.getUserAgent() != null && !item.getUserAgent().isBlank()) {
+            builder.append(" | browser=").append(parseBrowser(item.getUserAgent()));
+            builder.append(" | os=").append(parseOperatingSystem(item.getUserAgent()));
+            builder.append(" | device=").append(parseDeviceType(item.getUserAgent()));
             builder.append(" | ua=").append(item.getUserAgent());
         }
         return builder.toString();
+    }
+
+    private static String parseBrowser(String userAgent) {
+        String ua = userAgent.toLowerCase();
+        if (ua.contains("edg/")) {
+            return "Microsoft Edge";
+        }
+        if (ua.contains("opr/") || ua.contains("opera")) {
+            return "Opera";
+        }
+        if (ua.contains("chrome/") && !ua.contains("edg/") && !ua.contains("opr/")) {
+            return "Chrome";
+        }
+        if (ua.contains("firefox/")) {
+            return "Firefox";
+        }
+        if (ua.contains("safari/") && !ua.contains("chrome/")) {
+            return "Safari";
+        }
+        if (ua.contains("trident/") || ua.contains("msie")) {
+            return "Internet Explorer";
+        }
+        return "Unknown";
+    }
+
+    private static String parseOperatingSystem(String userAgent) {
+        String ua = userAgent.toLowerCase();
+        if (ua.contains("windows nt")) {
+            return "Windows";
+        }
+        if (ua.contains("mac os x") || ua.contains("macintosh")) {
+            return "macOS";
+        }
+        if (ua.contains("android")) {
+            return "Android";
+        }
+        if (ua.contains("iphone") || ua.contains("ipad") || ua.contains("ios")) {
+            return "iOS";
+        }
+        if (ua.contains("linux")) {
+            return "Linux";
+        }
+        return "Unknown";
+    }
+
+    private static String parseDeviceType(String userAgent) {
+        String ua = userAgent.toLowerCase();
+        if (ua.contains("mobile") || ua.contains("iphone") || ua.contains("android")) {
+            return "Mobile";
+        }
+        if (ua.contains("ipad") || ua.contains("tablet")) {
+            return "Tablet";
+        }
+        return "Desktop";
     }
 
     private static void requireAnyRole(String... allowed) {
