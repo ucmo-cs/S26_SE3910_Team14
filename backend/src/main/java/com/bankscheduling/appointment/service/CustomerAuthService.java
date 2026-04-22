@@ -7,9 +7,11 @@ import com.bankscheduling.appointment.dto.customerauth.CustomerProfileDto;
 import com.bankscheduling.appointment.dto.customerauth.CustomerRegisterRequest;
 import com.bankscheduling.appointment.entity.Customer;
 import com.bankscheduling.appointment.entity.CustomerAccount;
+import com.bankscheduling.appointment.entity.Role;
 import com.bankscheduling.appointment.repository.AppointmentRepository;
 import com.bankscheduling.appointment.repository.CustomerAccountRepository;
 import com.bankscheduling.appointment.repository.CustomerRepository;
+import com.bankscheduling.appointment.repository.RoleRepository;
 import com.bankscheduling.appointment.security.jwt.JwtTokenProvider;
 import org.springframework.http.HttpStatus;
 import org.springframework.security.core.Authentication;
@@ -28,19 +30,22 @@ public class CustomerAuthService {
     private final PasswordEncoder passwordEncoder;
     private final JwtTokenProvider jwtTokenProvider;
     private final AppointmentRepository appointmentRepository;
+    private final RoleRepository roleRepository;
 
     public CustomerAuthService(
             CustomerAccountRepository customerAccountRepository,
             CustomerRepository customerRepository,
             PasswordEncoder passwordEncoder,
             JwtTokenProvider jwtTokenProvider,
-            AppointmentRepository appointmentRepository
+            AppointmentRepository appointmentRepository,
+            RoleRepository roleRepository
     ) {
         this.customerAccountRepository = customerAccountRepository;
         this.customerRepository = customerRepository;
         this.passwordEncoder = passwordEncoder;
         this.jwtTokenProvider = jwtTokenProvider;
         this.appointmentRepository = appointmentRepository;
+        this.roleRepository = roleRepository;
     }
 
     @Transactional
@@ -59,10 +64,11 @@ public class CustomerAuthService {
         account.setCustomer(customer);
         account.setEmailNormalized(normalizedEmail);
         account.setPasswordHash(passwordEncoder.encode(request.password()));
+        account.setRole(resolveRoleOrThrow("ROLE_CUSTOMER"));
         customerAccountRepository.save(account);
 
-        String token = jwtTokenProvider.createAccessToken(account.getId(), List.of("ROLE_CUSTOMER"));
-        return new CustomerAuthResponse(token, toCustomerProfile(customer));
+        String token = jwtTokenProvider.createAccessToken(account.getId(), List.of(account.getRole().getName()));
+        return new CustomerAuthResponse(token, toCustomerProfile(account));
     }
 
     @Transactional(readOnly = true)
@@ -75,15 +81,14 @@ public class CustomerAuthService {
         }
 
         Customer customer = account.getCustomer();
-        String token = jwtTokenProvider.createAccessToken(account.getId(), List.of("ROLE_CUSTOMER"));
-        return new CustomerAuthResponse(token, toCustomerProfile(customer));
+        String token = jwtTokenProvider.createAccessToken(account.getId(), List.of(account.getRole().getName()));
+        return new CustomerAuthResponse(token, toCustomerProfile(account));
     }
 
     @Transactional(readOnly = true)
     public CustomerProfileDto getCurrentCustomerProfile() {
         CustomerAccount account = getCurrentAccount();
-        Customer customer = account.getCustomer();
-        return toCustomerProfile(customer);
+        return toCustomerProfile(account);
     }
 
     @Transactional(readOnly = true)
@@ -123,7 +128,8 @@ public class CustomerAuthService {
         return email == null ? "" : email.trim().toLowerCase();
     }
 
-    private CustomerProfileDto toCustomerProfile(Customer customer) {
+    private CustomerProfileDto toCustomerProfile(CustomerAccount account) {
+        Customer customer = account.getCustomer();
         String fullName = customer.getFullName() == null ? "" : customer.getFullName().trim();
         String firstName = fullName;
         String lastName = "";
@@ -133,12 +139,30 @@ public class CustomerAuthService {
             lastName = fullName.substring(firstSpace + 1).trim();
         }
 
+        String role = account.getRole() == null ? "CUSTOMER" : normalizeRoleName(account.getRole().getName());
+
         return new CustomerProfileDto(
                 customer.getId(),
                 firstName,
                 lastName,
                 fullName,
-                customer.getEmail()
+                customer.getEmail(),
+                role
         );
+    }
+
+    private Role resolveRoleOrThrow(String roleName) {
+        return roleRepository.findByName(roleName)
+                .orElseThrow(() -> new ResponseStatusException(
+                        HttpStatus.INTERNAL_SERVER_ERROR,
+                        "Required role is missing from database: " + roleName
+                ));
+    }
+
+    private static String normalizeRoleName(String roleName) {
+        if (roleName == null) {
+            return "CUSTOMER";
+        }
+        return roleName.startsWith("ROLE_") ? roleName.substring("ROLE_".length()) : roleName;
     }
 }

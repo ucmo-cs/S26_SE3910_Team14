@@ -7,6 +7,7 @@ import {
   type ReactNode,
 } from 'react';
 import { apiClient } from '../api/axiosConfig';
+import { deriveRoleFromIdentity, type UserRole } from '../types/roles';
 
 export type AuthStatus = 'loading' | 'authenticated' | 'unauthenticated';
 
@@ -16,11 +17,13 @@ export type CustomerUser = {
   lastName: string;
   fullName: string;
   email: string;
+  role?: string;
 };
 
 export type AuthContextValue = {
   status: AuthStatus;
   user: CustomerUser | null;
+  role: UserRole;
   login: (email: string, password: string) => Promise<void>;
   register: (firstName: string, lastName: string, email: string, password: string) => Promise<void>;
   logout: () => void;
@@ -40,6 +43,7 @@ function setAuthHeader(token: string | null) {
 export function AuthProvider({ children }: { children: ReactNode }) {
   const [status, setStatus] = useState<AuthStatus>('loading');
   const [user, setUser] = useState<CustomerUser | null>(null);
+  const [role, setRole] = useState<UserRole>('CUSTOMER');
 
   useEffect(() => {
     const token = localStorage.getItem(AUTH_TOKEN_KEY);
@@ -52,13 +56,16 @@ export function AuthProvider({ children }: { children: ReactNode }) {
     apiClient
       .get<CustomerUser>('/v1/customer/me')
       .then((response) => {
+        const resolvedRole = deriveRoleFromIdentity(response.data.email, response.data.role);
         setUser(response.data);
+        setRole(resolvedRole);
         setStatus('authenticated');
       })
       .catch(() => {
         localStorage.removeItem(AUTH_TOKEN_KEY);
         setAuthHeader(null);
         setUser(null);
+        setRole('CUSTOMER');
         setStatus('unauthenticated');
       });
   }, []);
@@ -68,9 +75,11 @@ export function AuthProvider({ children }: { children: ReactNode }) {
       '/v1/public/auth/customer/login',
       { email, password },
     );
+    const resolvedRole = deriveRoleFromIdentity(response.data.customer.email, response.data.customer.role);
     localStorage.setItem(AUTH_TOKEN_KEY, response.data.token);
     setAuthHeader(response.data.token);
     setUser(response.data.customer);
+    setRole(resolvedRole);
     setStatus('authenticated');
   };
 
@@ -84,9 +93,11 @@ export function AuthProvider({ children }: { children: ReactNode }) {
       '/v1/public/auth/customer/register',
       { firstName, lastName, email, password },
     );
+    const resolvedRole = deriveRoleFromIdentity(response.data.customer.email, response.data.customer.role);
     localStorage.setItem(AUTH_TOKEN_KEY, response.data.token);
     setAuthHeader(response.data.token);
     setUser(response.data.customer);
+    setRole(resolvedRole);
     setStatus('authenticated');
   };
 
@@ -94,6 +105,7 @@ export function AuthProvider({ children }: { children: ReactNode }) {
     localStorage.removeItem(AUTH_TOKEN_KEY);
     setAuthHeader(null);
     setUser(null);
+    setRole('CUSTOMER');
     setStatus('unauthenticated');
   };
 
@@ -101,11 +113,12 @@ export function AuthProvider({ children }: { children: ReactNode }) {
     () => ({
       status,
       user,
+      role,
       login,
       register,
       logout,
     }),
-    [status, user],
+    [status, user, role],
   );
 
   return <AuthContext.Provider value={value}>{children}</AuthContext.Provider>;

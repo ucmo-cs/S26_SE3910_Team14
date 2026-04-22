@@ -4,12 +4,20 @@ import { useAuth } from '../context/AuthProvider';
 export default function NavBar() {
   const location = useLocation();
   const navigate = useNavigate();
-  const { logout, user } = useAuth();
+  const { logout, user, role } = useAuth();
 
-  const navItems = [
-    { to: '/dashboard', label: 'Dashboard' },
-    { to: '/book', label: 'Book Appointment' },
-  ];
+  const navItems =
+    role === 'ADMIN'
+      ? [
+          { to: '/admin', label: 'Admin Dashboard' },
+          { to: '/dashboard', label: 'Home' },
+        ]
+      : role === 'EMPLOYEE'
+        ? [{ to: '/dashboard', label: 'Appointment Queue' }]
+        : [
+            { to: '/dashboard', label: 'Dashboard' },
+            { to: '/book', label: 'Book Appointment' },
+          ];
 
   return (
     <header className="border-b border-slate-200 bg-white">
@@ -36,6 +44,9 @@ export default function NavBar() {
           </nav>
         </div>
         <div className="flex items-center gap-3">
+          <span className="hidden rounded-full border border-slate-200 px-2 py-1 text-xs font-medium text-slate-700 md:inline">
+            {role}
+          </span>
           <span className="hidden text-sm text-slate-600 md:inline">{user?.email}</span>
           <button
             type="button"

@@ -1,10 +1,11 @@
-import axios from 'axios';
 import { useState, type FormEvent } from 'react';
-import { Link, Navigate, useNavigate } from 'react-router-dom';
+import { Link, Navigate, useNavigate, useSearchParams } from 'react-router-dom';
 import { useAuth } from '../context/AuthProvider';
+import { getFriendlyErrorMessage } from '../utils/httpError';
 
 export default function LoginPage() {
   const navigate = useNavigate();
+  const [searchParams] = useSearchParams();
   const { status, login } = useAuth();
   const [email, setEmail] = useState('');
   const [password, setPassword] = useState('');
@@ -23,15 +24,13 @@ export default function LoginPage() {
       await login(email, password);
       navigate('/dashboard', { replace: true });
     } catch (err) {
-      if (axios.isAxiosError(err)) {
-        setError(err.response?.data?.message ?? 'Unable to login. Please check your credentials.');
-      } else {
-        setError('Unable to login right now.');
-      }
+      setError(getFriendlyErrorMessage(err, 'Unable to login. Please check your credentials.'));
     } finally {
       setLoading(false);
     }
   };
+
+  const reason = searchParams.get('reason');
 
   return (
     <main className="min-h-screen bg-slate-100 px-4 py-10">
@@ -40,6 +39,15 @@ export default function LoginPage() {
         <p className="mt-2 text-sm text-slate-600">
           Sign in to view your appointments and continue booking.
         </p>
+        {reason === 'session-expired' ? (
+          <div className="mt-4 rounded-lg border border-amber-200 bg-amber-50 px-3 py-2 text-sm text-amber-700">
+            Your session expired. Please sign in again.
+          </div>
+        ) : reason === 'auth-required' ? (
+          <div className="mt-4 rounded-lg border border-slate-200 bg-slate-50 px-3 py-2 text-sm text-slate-700">
+            Please sign in to continue.
+          </div>
+        ) : null}
         <form className="mt-6 space-y-4" onSubmit={handleSubmit}>
           <label className="block text-sm font-medium text-slate-700">
             Email

@@ -1,9 +1,9 @@
 import { LoaderCircle } from 'lucide-react';
 import { useEffect, useState, type FormEvent } from 'react';
-import axios from 'axios';
 import { submitAppointment } from '../../api/bookingService';
 import { useAuth } from '../../context/AuthProvider';
 import { useBooking } from '../../context/BookingContext';
+import { getFriendlyErrorMessage } from '../../utils/httpError';
 
 type Step4DetailsProps = {
   onSubmitted: (appointmentId: string) => void;
@@ -70,11 +70,7 @@ export default function Step4Details({ onSubmitted }: Step4DetailsProps) {
       });
       onSubmitted(String(response.appointmentId));
     } catch (error) {
-      if (axios.isAxiosError(error)) {
-        setError(error.response?.data?.message ?? 'Unable to submit your appointment right now.');
-      } else {
-        setError('Unable to submit your appointment right now. Please try again.');
-      }
+      setError(getFriendlyErrorMessage(error, 'Unable to submit your appointment right now.'));
     } finally {
       setSubmitting(false);
     }

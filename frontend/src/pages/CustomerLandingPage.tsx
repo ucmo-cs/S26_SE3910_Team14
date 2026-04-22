@@ -1,17 +1,23 @@
 import { useEffect, useState } from 'react';
 import { Link } from 'react-router-dom';
+import AppointmentStatusTimeline from '../components/appointments/AppointmentStatusTimeline';
 import NavBar from '../components/NavBar';
 import { getCustomerAppointments, type CustomerAppointment } from '../api/customerService';
 import { useAuth } from '../context/AuthProvider';
+import { getFriendlyErrorMessage } from '../utils/httpError';
 
 export default function CustomerLandingPage() {
   const { user } = useAuth();
   const [appointments, setAppointments] = useState<CustomerAppointment[]>([]);
   const [loading, setLoading] = useState(true);
+  const [error, setError] = useState('');
 
   useEffect(() => {
     getCustomerAppointments()
       .then((data) => setAppointments(data))
+      .catch((err) =>
+        setError(getFriendlyErrorMessage(err, 'Unable to load appointments. Please try again soon.')),
+      )
       .finally(() => setLoading(false));
   }, []);
 
@@ -39,7 +45,14 @@ export default function CustomerLandingPage() {
         <section className="rounded-2xl border border-slate-200 bg-white p-6 shadow-sm">
           <h2 className="text-xl font-semibold text-blue-900">Your Appointments</h2>
           {loading ? (
-            <p className="mt-3 text-sm text-slate-500">Loading appointments...</p>
+            <div className="mt-4 space-y-3">
+              <div className="h-16 animate-pulse rounded-xl bg-slate-100" />
+              <div className="h-16 animate-pulse rounded-xl bg-slate-100" />
+            </div>
+          ) : error ? (
+            <div className="mt-3 rounded-lg border border-red-200 bg-red-50 px-3 py-2 text-sm text-red-700">
+              {error}
+            </div>
           ) : appointments.length === 0 ? (
             <p className="mt-3 text-sm text-slate-500">No appointments yet. Book your first one.</p>
           ) : (
@@ -52,7 +65,7 @@ export default function CustomerLandingPage() {
                     {new Date(appointment.scheduledStart).toLocaleString()} -{' '}
                     {new Date(appointment.scheduledEnd).toLocaleTimeString()}
                   </p>
-                  <p className="mt-1 text-xs uppercase tracking-wide text-slate-500">{appointment.status}</p>
+                  <AppointmentStatusTimeline status={appointment.status} />
                 </article>
               ))}
             </div>

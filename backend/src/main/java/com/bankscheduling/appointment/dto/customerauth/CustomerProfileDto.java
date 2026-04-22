@@ -5,6 +5,7 @@ public record CustomerProfileDto(
         String firstName,
         String lastName,
         String fullName,
-        String email
+        String email,
+        String role
 ) {
 }

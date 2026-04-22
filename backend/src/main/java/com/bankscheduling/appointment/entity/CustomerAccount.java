@@ -4,6 +4,7 @@ import jakarta.persistence.Column;
 import jakarta.persistence.Entity;
 import jakarta.persistence.FetchType;
 import jakarta.persistence.JoinColumn;
+import jakarta.persistence.ManyToOne;
 import jakarta.persistence.OneToOne;
 import jakarta.persistence.Table;
 
@@ -14,6 +15,10 @@ public class CustomerAccount extends AuditableEntity {
     @OneToOne(fetch = FetchType.LAZY, optional = false)
     @JoinColumn(name = "customer_id", nullable = false, unique = true)
     private Customer customer;
+
+    @ManyToOne(fetch = FetchType.LAZY, optional = false)
+    @JoinColumn(name = "role_id", nullable = false)
+    private Role role;
 
     @Column(name = "email_normalized", nullable = false, unique = true, length = 255)
     private String emailNormalized;
@@ -38,6 +43,14 @@ public class CustomerAccount extends AuditableEntity {
 
     public void setEmailNormalized(String emailNormalized) {
         this.emailNormalized = emailNormalized;
+    }
+
+    public Role getRole() {
+        return role;
+    }
+
+    public void setRole(Role role) {
+        this.role = role;
     }
 
     public String getPasswordHash() {
