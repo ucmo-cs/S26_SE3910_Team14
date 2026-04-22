@@ -110,21 +110,32 @@ public class DashboardDataService {
                 .orElseThrow(() -> new ResponseStatusException(HttpStatus.NOT_FOUND, "Appointment not found"));
 
         ZoneId branchZone = ZoneId.of(appointment.getBranch().getTimeZone());
-        ZonedDateTime start = ZonedDateTime.of(request.date(), request.startTime(), branchZone);
+        ZonedDateTime currentStart = appointment.getScheduledStart().atZone(branchZone);
         int duration = (int) Duration.between(appointment.getScheduledStart(), appointment.getScheduledEnd()).toMinutes();
         if (duration < 30 || duration % 30 != 0) {
             duration = appointment.getServiceType().getDefaultDurationMinutes();
         }
+        boolean hasDate = request.date() != null;
+        boolean hasStartTime = request.startTime() != null;
+        if (hasDate != hasStartTime) {
+            throw new ResponseStatusException(HttpStatus.BAD_REQUEST, "Date and start time must be provided together");
+        }
+        java.time.LocalDate effectiveDate = hasDate ? request.date() : currentStart.toLocalDate();
+        java.time.LocalTime effectiveStartTime = hasStartTime ? request.startTime() : currentStart.toLocalTime();
+        ZonedDateTime start = ZonedDateTime.of(effectiveDate, effectiveStartTime, branchZone);
         ZonedDateTime end = start.plusMinutes(duration);
+        boolean scheduleChanged = start.toInstant().compareTo(appointment.getScheduledStart()) != 0;
+
+        if (scheduleChanged) {
         BranchBusinessHours hours = branchBusinessHoursRepository.findByBranchIdAndDayOfWeekAndActiveTrue(
                 appointment.getBranch().getId(),
-                request.date().getDayOfWeek().getValue()
+                effectiveDate.getDayOfWeek().getValue()
         ).orElseThrow(() -> new ResponseStatusException(HttpStatus.BAD_REQUEST, "Branch is closed on the selected date"));
-        if (request.startTime().isBefore(hours.getOpenTime()) || end.toLocalTime().isAfter(hours.getCloseTime())) {
+        if (effectiveStartTime.isBefore(hours.getOpenTime()) || end.toLocalTime().isAfter(hours.getCloseTime())) {
             throw new ResponseStatusException(HttpStatus.BAD_REQUEST, "Appointment is outside branch business hours");
         }
-        validateNineToFiveWindow(request.startTime(), end.toLocalTime());
-        validateSlotBoundary(request.startTime(), duration);
+        validateNineToFiveWindow(effectiveStartTime, end.toLocalTime());
+        validateSlotBoundary(effectiveStartTime, duration);
         if (start.toInstant().isBefore(java.time.Instant.now())) {
             throw new ResponseStatusException(HttpStatus.BAD_REQUEST, "Cannot book an appointment in the past");
         }
@@ -146,7 +157,9 @@ public class DashboardDataService {
         )) {
             throw new ResponseStatusException(HttpStatus.CONFLICT, "Selected timeslot is no longer available");
         }
+        }
 
+        AppointmentStatus previousStatus = appointment.getStatus();
         if (request.status() != null && !request.status().isBlank()) {
             try {
                 AppointmentStatus targetStatus = AppointmentStatus.valueOf(request.status().trim().toUpperCase());
@@ -156,8 +169,10 @@ public class DashboardDataService {
                 throw new ResponseStatusException(HttpStatus.BAD_REQUEST, "Invalid appointment status");
             }
         }
-        appointment.setScheduledStart(start.toInstant());
-        appointment.setScheduledEnd(end.toInstant());
+        if (scheduleChanged) {
+            appointment.setScheduledStart(start.toInstant());
+            appointment.setScheduledEnd(end.toInstant());
+        }
         appointment.setNotes(request.notes());
         Appointment saved;
         try {
@@ -165,16 +180,21 @@ public class DashboardDataService {
         } catch (DataIntegrityViolationException ex) {
             throw new ResponseStatusException(HttpStatus.CONFLICT, "Selected timeslot is no longer available");
         }
-        appointmentSlotInventoryService.releaseSlots(saved.getId());
-        if (saved.getStatus() != AppointmentStatus.CANCELLED) {
-            appointmentSlotInventoryService.reserveSlots(
-                    saved,
-                    saved.getBranch().getId(),
-                    saved.getServiceType().getId(),
-                    request.date(),
-                    request.startTime(),
-                    saved.getServiceType().getDefaultDurationMinutes()
-            );
+        boolean statusChanged = previousStatus != saved.getStatus();
+        if (scheduleChanged) {
+            appointmentSlotInventoryService.releaseSlots(saved.getId());
+            if (saved.getStatus() != AppointmentStatus.CANCELLED) {
+                appointmentSlotInventoryService.reserveSlots(
+                        saved,
+                        saved.getBranch().getId(),
+                        saved.getServiceType().getId(),
+                        effectiveDate,
+                        effectiveStartTime,
+                        duration
+                );
+            }
+        } else if (statusChanged && saved.getStatus() == AppointmentStatus.CANCELLED) {
+            appointmentSlotInventoryService.releaseSlots(saved.getId());
         }
         return new DashboardAppointmentDto(
                 saved.getId(),

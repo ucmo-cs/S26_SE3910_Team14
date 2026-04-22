@@ -39,13 +39,7 @@ export default function EmployeeDashboardPage() {
 
   const setStatus = async (appointmentId: number, status: 'APPROVED' | 'COMPLETED' | 'CANCELLED') => {
     try {
-      const current = appointments.find((item) => item.id === appointmentId);
-      if (!current) return;
-      const updated = await updateStaffAppointment(appointmentId, {
-        date: current.scheduledAt.slice(0, 10),
-        startTime: new Date(current.scheduledAt).toTimeString().slice(0, 5),
-        status,
-      });
+      const updated = await updateStaffAppointment(appointmentId, { status });
       setAppointments((prev) => prev.map((item) => (item.id === appointmentId ? updated : item)));
     } catch (err) {
       setError(getFriendlyErrorMessage(err, 'Unable to update appointment status right now.'));

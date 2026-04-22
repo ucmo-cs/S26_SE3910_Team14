@@ -58,7 +58,7 @@ export async function toggleUserLock(
 
 export async function updateStaffAppointment(
   appointmentId: number,
-  payload: { date: string; startTime: string; status?: string; notes?: string },
+  payload: { date?: string; startTime?: string; status?: string; notes?: string },
 ): Promise<DashboardAppointment> {
   const { data } = await apiClient.patch<DashboardAppointment>(
     `/v1/dashboard/appointments/${appointmentId}`,
