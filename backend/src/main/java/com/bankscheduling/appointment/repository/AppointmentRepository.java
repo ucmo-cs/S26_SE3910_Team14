@@ -65,6 +65,49 @@ public interface AppointmentRepository extends JpaRepository<Appointment, Long> 
     );
 
     @Query("""
+            select a from Appointment a
+            where a.branch.id = :branchId
+              and a.serviceType.id = :serviceTypeId
+              and a.scheduledStart >= :dayStart
+              and a.scheduledStart < :dayEnd
+              and a.status <> com.bankscheduling.appointment.entity.AppointmentStatus.CANCELLED
+            """)
+    List<Appointment> findActiveByBranchServiceAndDayWindow(
+            @Param("branchId") Long branchId,
+            @Param("serviceTypeId") Long serviceTypeId,
+            @Param("dayStart") Instant dayStart,
+            @Param("dayEnd") Instant dayEnd
+    );
+
+    @Query("""
+            select count(a) > 0 from Appointment a
+            where a.branch.id = :branchId
+              and a.serviceType.id = :serviceTypeId
+              and a.scheduledStart = :scheduledStart
+              and a.status <> com.bankscheduling.appointment.entity.AppointmentStatus.CANCELLED
+            """)
+    boolean existsActiveBranchServiceStart(
+            @Param("branchId") Long branchId,
+            @Param("serviceTypeId") Long serviceTypeId,
+            @Param("scheduledStart") Instant scheduledStart
+    );
+
+    @Query("""
+            select count(a) > 0 from Appointment a
+            where a.branch.id = :branchId
+              and a.serviceType.id = :serviceTypeId
+              and a.scheduledStart = :scheduledStart
+              and a.id <> :appointmentId
+              and a.status <> com.bankscheduling.appointment.entity.AppointmentStatus.CANCELLED
+            """)
+    boolean existsActiveBranchServiceStartExcluding(
+            @Param("branchId") Long branchId,
+            @Param("serviceTypeId") Long serviceTypeId,
+            @Param("scheduledStart") Instant scheduledStart,
+            @Param("appointmentId") Long appointmentId
+    );
+
+    @Query("""
             select count(a) > 0 from Appointment a
             where a.employee.id = :employeeId
               and a.status <> com.bankscheduling.appointment.entity.AppointmentStatus.CANCELLED

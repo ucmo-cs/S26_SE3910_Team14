@@ -6,10 +6,13 @@ import com.bankscheduling.appointment.dto.dashboard.DashboardAppointmentDto;
 import com.bankscheduling.appointment.dto.dashboard.DashboardUserDto;
 import com.bankscheduling.appointment.entity.Appointment;
 import com.bankscheduling.appointment.entity.AppointmentStatus;
+import com.bankscheduling.appointment.entity.BranchBusinessHours;
 import com.bankscheduling.appointment.entity.CustomerAccount;
 import com.bankscheduling.appointment.repository.AppointmentRepository;
 import com.bankscheduling.appointment.repository.AuditLogRepository;
+import com.bankscheduling.appointment.repository.BranchBusinessHoursRepository;
 import com.bankscheduling.appointment.repository.CustomerAccountRepository;
+import org.springframework.dao.DataIntegrityViolationException;
 import org.springframework.http.HttpStatus;
 import org.springframework.security.core.Authentication;
 import org.springframework.security.core.context.SecurityContextHolder;
@@ -27,15 +30,18 @@ public class DashboardDataService {
     private final AppointmentRepository appointmentRepository;
     private final AuditLogRepository auditLogRepository;
     private final CustomerAccountRepository customerAccountRepository;
+    private final BranchBusinessHoursRepository branchBusinessHoursRepository;
 
     public DashboardDataService(
             AppointmentRepository appointmentRepository,
             AuditLogRepository auditLogRepository,
-            CustomerAccountRepository customerAccountRepository
+            CustomerAccountRepository customerAccountRepository,
+            BranchBusinessHoursRepository branchBusinessHoursRepository
     ) {
         this.appointmentRepository = appointmentRepository;
         this.auditLogRepository = auditLogRepository;
         this.customerAccountRepository = customerAccountRepository;
+        this.branchBusinessHoursRepository = branchBusinessHoursRepository;
     }
 
     @Transactional(readOnly = true)
@@ -102,7 +108,26 @@ public class DashboardDataService {
         ZonedDateTime start = ZonedDateTime.of(request.date(), request.startTime(), branchZone);
         int duration = appointment.getServiceType().getDefaultDurationMinutes();
         ZonedDateTime end = start.plusMinutes(duration);
+        BranchBusinessHours hours = branchBusinessHoursRepository.findByBranchIdAndDayOfWeekAndActiveTrue(
+                appointment.getBranch().getId(),
+                request.date().getDayOfWeek().getValue()
+        ).orElseThrow(() -> new ResponseStatusException(HttpStatus.BAD_REQUEST, "Branch is closed on the selected date"));
+        if (request.startTime().isBefore(hours.getOpenTime()) || end.toLocalTime().isAfter(hours.getCloseTime())) {
+            throw new ResponseStatusException(HttpStatus.BAD_REQUEST, "Appointment is outside branch business hours");
+        }
         validateNineToFiveWindow(request.startTime(), end.toLocalTime());
+        validateSlotBoundary(request.startTime(), duration);
+        if (start.toInstant().isBefore(java.time.Instant.now())) {
+            throw new ResponseStatusException(HttpStatus.BAD_REQUEST, "Cannot book an appointment in the past");
+        }
+        if (appointmentRepository.existsActiveBranchServiceStartExcluding(
+                appointment.getBranch().getId(),
+                appointment.getServiceType().getId(),
+                start.toInstant(),
+                appointment.getId()
+        )) {
+            throw new ResponseStatusException(HttpStatus.CONFLICT, "Selected timeslot is no longer available");
+        }
 
         if (appointmentRepository.existsEmployeeOverlapExcluding(
                 appointment.getEmployee().getId(),
@@ -123,7 +148,12 @@ public class DashboardDataService {
         appointment.setScheduledStart(start.toInstant());
         appointment.setScheduledEnd(end.toInstant());
         appointment.setNotes(request.notes());
-        Appointment saved = appointmentRepository.save(appointment);
+        Appointment saved;
+        try {
+            saved = appointmentRepository.save(appointment);
+        } catch (DataIntegrityViolationException ex) {
+            throw new ResponseStatusException(HttpStatus.CONFLICT, "Selected timeslot is no longer available");
+        }
         return new DashboardAppointmentDto(
                 saved.getId(),
                 saved.getCustomer().getFullName(),
@@ -167,6 +197,15 @@ public class DashboardDataService {
     private void validateNineToFiveWindow(LocalTime start, LocalTime end) {
         if (start.isBefore(LocalTime.of(9, 0)) || end.isAfter(LocalTime.of(17, 0))) {
             throw new ResponseStatusException(HttpStatus.BAD_REQUEST, "Appointments must be between 9:00 AM and 5:00 PM");
+        }
+    }
+
+    private void validateSlotBoundary(LocalTime startTime, int durationMinutes) {
+        if (startTime.getSecond() != 0 || startTime.getNano() != 0 || startTime.getMinute() % 30 != 0) {
+            throw new ResponseStatusException(HttpStatus.BAD_REQUEST, "Appointments must start on 30-minute boundaries");
+        }
+        if (durationMinutes < 30 || durationMinutes % 30 != 0) {
+            throw new ResponseStatusException(HttpStatus.BAD_REQUEST, "Service duration is not aligned with appointment slots");
         }
     }
 }

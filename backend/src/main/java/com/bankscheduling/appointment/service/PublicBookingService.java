@@ -20,6 +20,7 @@ import com.bankscheduling.appointment.repository.CustomerAccountRepository;
 import com.bankscheduling.appointment.repository.CustomerRepository;
 import com.bankscheduling.appointment.repository.EmployeeRepository;
 import com.bankscheduling.appointment.repository.ServiceTypeRepository;
+import org.springframework.dao.DataIntegrityViolationException;
 import org.springframework.http.HttpStatus;
 import org.springframework.security.authentication.AnonymousAuthenticationToken;
 import org.springframework.security.core.Authentication;
@@ -39,6 +40,7 @@ import java.util.ArrayList;
 import java.util.List;
 import java.util.Map;
 import java.util.Optional;
+import java.util.Set;
 import java.util.stream.Collectors;
 
 @Service
@@ -121,6 +123,11 @@ public class PublicBookingService {
                 .findEmployeeOverlapsInWindow(employeeIds, dayStart, dayEnd)
                 .stream()
                 .collect(Collectors.groupingBy(a -> a.getEmployee().getId()));
+        Set<Instant> reservedSlotStarts = appointmentRepository
+                .findActiveByBranchServiceAndDayWindow(branchId, topicId, dayStart, dayEnd)
+                .stream()
+                .map(Appointment::getScheduledStart)
+                .collect(Collectors.toSet());
 
         List<String> available = new ArrayList<>();
         LocalDateTime slotCursor = LocalDateTime.of(date, DEMO_OPEN_TIME);
@@ -129,13 +136,14 @@ public class PublicBookingService {
             ZonedDateTime slotEnd = slotStart.plusMinutes(topic.getDefaultDurationMinutes());
             Instant slotStartInstant = slotStart.toInstant();
             Instant slotEndInstant = slotEnd.toInstant();
+            boolean alreadyBookedForTopic = reservedSlotStarts.contains(slotStartInstant);
 
             boolean slotHasEmployee = employeeIds.stream().anyMatch(employeeId ->
                     appointmentsByEmployee.getOrDefault(employeeId, List.of()).stream().noneMatch(appointment ->
                             appointment.getScheduledStart().isBefore(slotEndInstant)
                                     && appointment.getScheduledEnd().isAfter(slotStartInstant)
                     ));
-            if (slotHasEmployee) {
+            if (slotHasEmployee && !alreadyBookedForTopic) {
                 available.add(slotStart.toLocalTime().format(SLOT_FORMAT));
             }
 
@@ -166,6 +174,9 @@ public class PublicBookingService {
         if (scheduledStart.isBefore(Instant.now())) {
             throw new ResponseStatusException(HttpStatus.BAD_REQUEST, "Cannot book an appointment in the past");
         }
+        if (appointmentRepository.existsActiveBranchServiceStart(branch.getId(), topic.getId(), scheduledStart)) {
+            throw new ResponseStatusException(HttpStatus.CONFLICT, "Selected timeslot is no longer available");
+        }
 
         List<Employee> eligibleEmployees = employeeRepository.findActiveByBranchAndServiceTypeForUpdate(branch.getId(), topic.getId());
         if (eligibleEmployees.isEmpty()) {
@@ -188,7 +199,12 @@ public class PublicBookingService {
         appointment.setScheduledEnd(scheduledEnd);
         appointment.setStatus(AppointmentStatus.SCHEDULED);
 
-        Appointment saved = appointmentRepository.save(appointment);
+        Appointment saved;
+        try {
+            saved = appointmentRepository.save(appointment);
+        } catch (DataIntegrityViolationException ex) {
+            throw new ResponseStatusException(HttpStatus.CONFLICT, "Selected timeslot is no longer available");
+        }
         appointmentEmailService.sendBookingConfirmation(saved, branchZone);
         return new BookingResponseDto(saved.getId(), "Appointment booked successfully");
     }
