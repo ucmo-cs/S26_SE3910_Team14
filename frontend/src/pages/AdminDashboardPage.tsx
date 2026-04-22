@@ -2,6 +2,7 @@ import { useEffect, useMemo, useState } from 'react';
 import {
   getRecentAppointments,
   getSystemActivity,
+  updateStaffAppointment,
   getUsersWithRoles,
   type ActivityItem,
   type DashboardAppointment,
@@ -33,6 +34,20 @@ export default function AdminDashboardPage() {
     const updated = await getSystemActivity();
     setActivity(updated);
     setRefreshingActivity(false);
+  };
+
+  const changeStatus = async (
+    appointmentId: number,
+    status: 'APPROVED' | 'COMPLETED' | 'CANCELLED',
+  ) => {
+    const current = appointments.find((item) => item.id === appointmentId);
+    if (!current) return;
+    const updated = await updateStaffAppointment(appointmentId, {
+      date: current.scheduledAt.slice(0, 10),
+      startTime: new Date(current.scheduledAt).toTimeString().slice(0, 5),
+      status,
+    });
+    setAppointments((prev) => prev.map((item) => (item.id === appointmentId ? updated : item)));
   };
 
   const todaysAppointments = useMemo(() => {
@@ -67,6 +82,7 @@ export default function AdminDashboardPage() {
               appointments={appointments}
               users={users}
               onUsersUpdated={setUsers}
+              onStatusChange={changeStatus}
               todaysAppointments={todaysAppointments}
               failedBookingAttempts={failedBookingAttempts}
               activeUsers={activeUsers}

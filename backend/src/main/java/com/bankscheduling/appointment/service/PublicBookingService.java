@@ -197,7 +197,7 @@ public class PublicBookingService {
         appointment.setServiceType(topic);
         appointment.setScheduledStart(scheduledStart);
         appointment.setScheduledEnd(scheduledEnd);
-        appointment.setStatus(AppointmentStatus.SCHEDULED);
+        appointment.setStatus(AppointmentStatus.REQUESTED);
 
         Appointment saved;
         try {

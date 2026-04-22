@@ -1,3 +1,4 @@
+import { useEffect, useState } from 'react';
 import { Link, useLocation, useNavigate } from 'react-router-dom';
 import { useAuth } from '../context/AuthProvider';
 
@@ -5,6 +6,18 @@ export default function NavBar() {
   const location = useLocation();
   const navigate = useNavigate();
   const { logout, user, role } = useAuth();
+  const [darkMode, setDarkMode] = useState(() => localStorage.getItem('uiTheme') === 'dark');
+
+  useEffect(() => {
+    const root = document.documentElement;
+    if (darkMode) {
+      root.setAttribute('data-theme', 'dark');
+      localStorage.setItem('uiTheme', 'dark');
+    } else {
+      root.setAttribute('data-theme', 'light');
+      localStorage.setItem('uiTheme', 'light');
+    }
+  }, [darkMode]);
 
   const navItems =
     role === 'ADMIN'
@@ -44,6 +57,13 @@ export default function NavBar() {
           </nav>
         </div>
         <div className="flex items-center gap-3">
+          <button
+            type="button"
+            onClick={() => setDarkMode((prev) => !prev)}
+            className="rounded-md border border-slate-200 px-3 py-1.5 text-xs text-slate-700 hover:bg-slate-50"
+          >
+            {darkMode ? 'Light Mode' : 'Dark Mode'}
+          </button>
           <span className="hidden rounded-full border border-slate-200 px-2 py-1 text-xs font-medium text-slate-700 md:inline">
             {role}
           </span>

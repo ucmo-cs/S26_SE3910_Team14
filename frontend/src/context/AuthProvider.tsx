@@ -54,7 +54,7 @@ export function AuthProvider({ children }: { children: ReactNode }) {
 
     setAuthHeader(token);
     apiClient
-      .get<CustomerUser>('/v1/customer/me')
+      .get<CustomerUser>('/v1/auth/me')
       .then((response) => {
         const resolvedRole = deriveRoleFromIdentity(response.data.email, response.data.role);
         setUser(response.data);

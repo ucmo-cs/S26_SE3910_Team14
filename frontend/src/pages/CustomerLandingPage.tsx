@@ -3,12 +3,13 @@ import { Link } from 'react-router-dom';
 import AppointmentStatusTimeline from '../components/appointments/AppointmentStatusTimeline';
 import NavBar from '../components/NavBar';
 import {
-  deleteCustomerAppointment,
+  cancelCustomerAppointment,
   getCustomerAppointments,
   updateCustomerAppointment,
   type CustomerAppointment,
 } from '../api/customerService';
 import { useAuth } from '../context/AuthProvider';
+import { getStatusCardClass, getStatusPillClass, isRequested } from '../utils/appointmentStatus';
 import { getFriendlyErrorMessage } from '../utils/httpError';
 
 export default function CustomerLandingPage() {
@@ -29,12 +30,16 @@ export default function CustomerLandingPage() {
       .finally(() => setLoading(false));
   }, []);
 
-  const handleDelete = async (appointmentId: number) => {
+  const handleCancel = async (appointmentId: number) => {
     try {
-      await deleteCustomerAppointment(appointmentId);
-      setAppointments((prev) => prev.filter((item) => item.appointmentId !== appointmentId));
+      await cancelCustomerAppointment(appointmentId);
+      setAppointments((prev) =>
+        prev.map((item) =>
+          item.appointmentId === appointmentId ? { ...item, status: 'CANCELLED' } : item,
+        ),
+      );
     } catch (err) {
-      setError(getFriendlyErrorMessage(err, 'Unable to delete this appointment right now.'));
+      setError(getFriendlyErrorMessage(err, 'Unable to cancel this appointment right now.'));
     }
   };
 
@@ -85,13 +90,21 @@ export default function CustomerLandingPage() {
           ) : (
             <div className="mt-4 space-y-3">
               {appointments.map((appointment) => (
-                <article key={appointment.appointmentId} className="rounded-xl border border-slate-200 p-4">
+                <article
+                  key={appointment.appointmentId}
+                  className={`rounded-xl border p-4 ${getStatusCardClass(appointment.status)}`}
+                >
                   <p className="text-sm font-medium text-blue-900">{appointment.topic}</p>
                   <p className="text-sm text-slate-700">{appointment.branch}</p>
                   <p className="text-sm text-slate-600">
                     {new Date(appointment.scheduledStart).toLocaleString()} -{' '}
                     {new Date(appointment.scheduledEnd).toLocaleTimeString()}
                   </p>
+                  <span
+                    className={`mt-2 inline-flex rounded-full border px-2 py-0.5 text-xs font-medium ${getStatusPillClass(appointment.status)}`}
+                  >
+                    {appointment.status}
+                  </span>
                   <AppointmentStatusTimeline status={appointment.status} />
                   {editingId === appointment.appointmentId ? (
                     <div className="mt-3 flex flex-wrap items-center gap-2">
@@ -126,21 +139,22 @@ export default function CustomerLandingPage() {
                     <div className="mt-3 flex gap-2">
                       <button
                         type="button"
+                        disabled={!isRequested(appointment.status)}
                         onClick={() => {
                           setEditingId(appointment.appointmentId);
                           setEditDate(appointment.scheduledStart.slice(0, 10));
                           setEditTime(new Date(appointment.scheduledStart).toTimeString().slice(0, 5));
                         }}
-                        className="rounded-md border border-slate-200 px-3 py-1.5 text-xs text-slate-700 hover:bg-slate-50"
+                        className="rounded-md border border-slate-200 px-3 py-1.5 text-xs text-slate-700 hover:bg-slate-50 disabled:cursor-not-allowed disabled:opacity-50"
                       >
                         Edit
                       </button>
                       <button
                         type="button"
-                        onClick={() => handleDelete(appointment.appointmentId)}
+                        onClick={() => handleCancel(appointment.appointmentId)}
                         className="rounded-md border border-red-200 px-3 py-1.5 text-xs text-red-700 hover:bg-red-50"
                       >
-                        Delete
+                        Cancel
                       </button>
                     </div>
                   )}

@@ -129,8 +129,8 @@ public class CustomerAuthService {
         if (!appointment.getCustomer().getId().equals(account.getCustomer().getId())) {
             throw new ResponseStatusException(HttpStatus.FORBIDDEN, "You can only update your own appointments");
         }
-        if (appointment.getStatus() == AppointmentStatus.CANCELLED) {
-            throw new ResponseStatusException(HttpStatus.CONFLICT, "Cancelled appointments cannot be edited");
+        if (appointment.getStatus() != AppointmentStatus.REQUESTED) {
+            throw new ResponseStatusException(HttpStatus.CONFLICT, "Only requested appointments can be edited");
         }
 
         ZoneId branchZone = ZoneId.of(appointment.getBranch().getTimeZone());
@@ -174,7 +174,7 @@ public class CustomerAuthService {
         appointment.setScheduledStart(startInstant);
         appointment.setScheduledEnd(endInstant);
         appointment.setNotes(request.notes());
-        appointment.setStatus(AppointmentStatus.SCHEDULED);
+        appointment.setStatus(AppointmentStatus.REQUESTED);
         Appointment saved;
         try {
             saved = appointmentRepository.save(appointment);
@@ -192,14 +192,15 @@ public class CustomerAuthService {
     }
 
     @Transactional
-    public void deleteCurrentCustomerAppointment(Long appointmentId) {
+    public void cancelCurrentCustomerAppointment(Long appointmentId) {
         CustomerAccount account = getCurrentAccount();
         Appointment appointment = appointmentRepository.findByIdWithAssociations(appointmentId)
                 .orElseThrow(() -> new ResponseStatusException(HttpStatus.NOT_FOUND, "Appointment not found"));
         if (!appointment.getCustomer().getId().equals(account.getCustomer().getId())) {
-            throw new ResponseStatusException(HttpStatus.FORBIDDEN, "You can only delete your own appointments");
+            throw new ResponseStatusException(HttpStatus.FORBIDDEN, "You can only cancel your own appointments");
         }
-        appointmentRepository.delete(appointment);
+        appointment.setStatus(AppointmentStatus.CANCELLED);
+        appointmentRepository.save(appointment);
     }
 
     private CustomerAccount getCurrentAccount() {

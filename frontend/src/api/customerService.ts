@@ -25,6 +25,6 @@ export async function updateCustomerAppointment(
   return response.data;
 }
 
-export async function deleteCustomerAppointment(appointmentId: number): Promise<void> {
-  await apiClient.delete(`/v1/customer/appointments/${appointmentId}`);
+export async function cancelCustomerAppointment(appointmentId: number): Promise<void> {
+  await apiClient.patch(`/v1/customer/appointments/${appointmentId}/cancel`);
 }

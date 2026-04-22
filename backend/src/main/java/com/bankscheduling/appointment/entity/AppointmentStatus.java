@@ -1,8 +1,8 @@
 package com.bankscheduling.appointment.entity;
 
 public enum AppointmentStatus {
-    SCHEDULED,
+    REQUESTED,
+    APPROVED,
     CANCELLED,
-    COMPLETED,
-    NO_SHOW
+    COMPLETED
 }

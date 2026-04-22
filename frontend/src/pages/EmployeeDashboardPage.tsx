@@ -1,12 +1,8 @@
 import { useEffect, useState } from 'react';
-import {
-  deleteStaffAppointment,
-  getRecentAppointments,
-  updateStaffAppointment,
-  type DashboardAppointment,
-} from '../api/adminService';
+import { getRecentAppointments, updateStaffAppointment, type DashboardAppointment } from '../api/adminService';
 import AppointmentStatusTimeline from '../components/appointments/AppointmentStatusTimeline';
 import NavBar from '../components/NavBar';
+import { getStatusCardClass, getStatusPillClass } from '../utils/appointmentStatus';
 import { getFriendlyErrorMessage } from '../utils/httpError';
 
 export default function EmployeeDashboardPage() {
@@ -16,7 +12,7 @@ export default function EmployeeDashboardPage() {
   const [editingId, setEditingId] = useState<number | null>(null);
   const [editDate, setEditDate] = useState('');
   const [editTime, setEditTime] = useState('09:00');
-  const [editStatus, setEditStatus] = useState('SCHEDULED');
+  const [editStatus, setEditStatus] = useState('REQUESTED');
 
   useEffect(() => {
     getRecentAppointments()
@@ -26,15 +22,6 @@ export default function EmployeeDashboardPage() {
       )
       .finally(() => setLoading(false));
   }, []);
-
-  const handleDelete = async (appointmentId: number) => {
-    try {
-      await deleteStaffAppointment(appointmentId);
-      setAppointments((prev) => prev.filter((item) => item.id !== appointmentId));
-    } catch (err) {
-      setError(getFriendlyErrorMessage(err, 'Unable to delete appointment right now.'));
-    }
-  };
 
   const handleSave = async (appointmentId: number) => {
     try {
@@ -47,6 +34,21 @@ export default function EmployeeDashboardPage() {
       setEditingId(null);
     } catch (err) {
       setError(getFriendlyErrorMessage(err, 'Unable to update appointment right now.'));
+    }
+  };
+
+  const setStatus = async (appointmentId: number, status: 'APPROVED' | 'COMPLETED' | 'CANCELLED') => {
+    try {
+      const current = appointments.find((item) => item.id === appointmentId);
+      if (!current) return;
+      const updated = await updateStaffAppointment(appointmentId, {
+        date: current.scheduledAt.slice(0, 10),
+        startTime: new Date(current.scheduledAt).toTimeString().slice(0, 5),
+        status,
+      });
+      setAppointments((prev) => prev.map((item) => (item.id === appointmentId ? updated : item)));
+    } catch (err) {
+      setError(getFriendlyErrorMessage(err, 'Unable to update appointment status right now.'));
     }
   };
 
@@ -72,7 +74,10 @@ export default function EmployeeDashboardPage() {
           ) : (
             <div className="space-y-4">
               {appointments.map((appointment) => (
-                <article key={appointment.id} className="rounded-xl border border-slate-200 p-4">
+                <article
+                  key={appointment.id}
+                  className={`rounded-xl border p-4 ${getStatusCardClass(appointment.status)}`}
+                >
                   <div className="flex flex-wrap justify-between gap-2">
                     <div>
                       <p className="font-medium text-blue-900">{appointment.service}</p>
@@ -84,6 +89,11 @@ export default function EmployeeDashboardPage() {
                     </p>
                   </div>
                   <AppointmentStatusTimeline status={appointment.status} />
+                  <span
+                    className={`mt-2 inline-flex rounded-full border px-2 py-0.5 text-xs font-medium ${getStatusPillClass(appointment.status)}`}
+                  >
+                    {appointment.status}
+                  </span>
                   {editingId === appointment.id ? (
                     <div className="mt-3 flex flex-wrap items-center gap-2">
                       <input
@@ -103,9 +113,9 @@ export default function EmployeeDashboardPage() {
                         onChange={(event) => setEditStatus(event.target.value)}
                         className="rounded-md border border-slate-200 px-2 py-1 text-sm"
                       >
-                        <option value="SCHEDULED">Scheduled</option>
+                        <option value="REQUESTED">Requested</option>
+                        <option value="APPROVED">Approved</option>
                         <option value="COMPLETED">Completed</option>
-                        <option value="NO_SHOW">No Show</option>
                         <option value="CANCELLED">Cancelled</option>
                       </select>
                       <button
@@ -139,10 +149,27 @@ export default function EmployeeDashboardPage() {
                       </button>
                       <button
                         type="button"
-                        onClick={() => handleDelete(appointment.id)}
-                        className="rounded-md border border-red-200 px-3 py-1.5 text-xs text-red-700 hover:bg-red-50"
+                        onClick={() => setStatus(appointment.id, 'APPROVED')}
+                        disabled={appointment.status !== 'REQUESTED'}
+                        className="rounded-md border border-emerald-200 px-3 py-1.5 text-xs text-emerald-700 hover:bg-emerald-50 disabled:cursor-not-allowed disabled:opacity-50"
                       >
-                        Delete
+                        Approve
+                      </button>
+                      <button
+                        type="button"
+                        onClick={() => setStatus(appointment.id, 'COMPLETED')}
+                        disabled={appointment.status !== 'APPROVED'}
+                        className="rounded-md border border-emerald-800 px-3 py-1.5 text-xs text-emerald-900 hover:bg-emerald-100 disabled:cursor-not-allowed disabled:opacity-50"
+                      >
+                        Complete
+                      </button>
+                      <button
+                        type="button"
+                        onClick={() => setStatus(appointment.id, 'CANCELLED')}
+                        disabled={appointment.status === 'CANCELLED' || appointment.status === 'COMPLETED'}
+                        className="rounded-md border border-red-200 px-3 py-1.5 text-xs text-red-700 hover:bg-red-50 disabled:cursor-not-allowed disabled:opacity-50"
+                      >
+                        Cancel
                       </button>
                     </div>
                   )}
