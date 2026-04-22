@@ -152,18 +152,19 @@ export default function CustomerLandingPage() {
                     </div>
                   ) : (
                     <div className="mt-3 flex gap-2">
-                      <button
-                        type="button"
-                        disabled={!isRequested(appointment.status)}
-                        onClick={() => {
-                          setEditingId(appointment.appointmentId);
-                          setEditDate(appointment.scheduledStart.slice(0, 10));
-                          setEditTime(new Date(appointment.scheduledStart).toTimeString().slice(0, 5));
-                        }}
-                        className="rounded-md border border-slate-200 px-3 py-1.5 text-xs text-slate-700 hover:bg-slate-50 disabled:cursor-not-allowed disabled:opacity-50"
-                      >
-                        Edit
-                      </button>
+                      {isRequested(appointment.status) ? (
+                        <button
+                          type="button"
+                          onClick={() => {
+                            setEditingId(appointment.appointmentId);
+                            setEditDate(appointment.scheduledStart.slice(0, 10));
+                            setEditTime(new Date(appointment.scheduledStart).toTimeString().slice(0, 5));
+                          }}
+                          className="rounded-md border border-slate-200 px-3 py-1.5 text-xs text-slate-700 hover:bg-slate-50"
+                        >
+                          Edit
+                        </button>
+                      ) : null}
                       <button
                         type="button"
                         onClick={() => handleCancel(appointment.appointmentId)}
