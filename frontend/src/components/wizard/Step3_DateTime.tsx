@@ -47,14 +47,15 @@ export default function Step3DateTime() {
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState('');
   const [branchTimeZone, setBranchTimeZone] = useState('');
-  const [slotStepMinutes, setSlotStepMinutes] = useState<30 | 60>(30);
   const {
     selectedBranch,
     selectedTopic,
     selectedDate,
     selectedTime,
+    selectedDurationMinutes,
     setSelectedDate,
     setSelectedTime,
+    setSelectedDurationMinutes,
     goToNextStep,
     goToPreviousStep,
   } = useBooking();
@@ -77,7 +78,7 @@ export default function Step3DateTime() {
 
     setLoading(true);
     setError('');
-    getAvailableTimeslots(selectedBranch.id, selectedTopic.id, selectedDate, slotStepMinutes)
+    getAvailableTimeslots(selectedBranch.id, selectedTopic.id, selectedDate, selectedDurationMinutes)
       .then((result) => {
         setSlots(result.slots);
         setUnavailableSlots(result.unavailableSlots ?? []);
@@ -85,7 +86,7 @@ export default function Step3DateTime() {
       })
       .catch(() => setError('Unable to load timeslots for this date. Please pick another date or retry.'))
       .finally(() => setLoading(false));
-  }, [selectedBranch, selectedTopic, selectedDate, slotStepMinutes]);
+  }, [selectedBranch, selectedTopic, selectedDate, selectedDurationMinutes]);
 
   const handleTimePick = (time: string) => {
     setSelectedTime(time);
@@ -146,25 +147,25 @@ export default function Step3DateTime() {
         <div className="mb-3 flex gap-2">
           <button
             type="button"
-            onClick={() => setSlotStepMinutes(30)}
+            onClick={() => setSelectedDurationMinutes(30)}
             className={`rounded-full border px-3 py-1 text-xs ${
-              slotStepMinutes === 30
+              selectedDurationMinutes === 30
                 ? 'border-blue-900 bg-blue-900 text-white'
                 : 'border-slate-200 bg-white text-slate-700'
             }`}
           >
-            30-minute intervals
+            30-minute appointment
           </button>
           <button
             type="button"
-            onClick={() => setSlotStepMinutes(60)}
+            onClick={() => setSelectedDurationMinutes(60)}
             className={`rounded-full border px-3 py-1 text-xs ${
-              slotStepMinutes === 60
+              selectedDurationMinutes === 60
                 ? 'border-blue-900 bg-blue-900 text-white'
                 : 'border-slate-200 bg-white text-slate-700'
             }`}
           >
-            60-minute intervals
+            60-minute appointment
           </button>
         </div>
         {loading ? (

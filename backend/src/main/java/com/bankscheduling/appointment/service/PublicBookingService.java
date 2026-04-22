@@ -103,8 +103,8 @@ public class PublicBookingService {
     }
 
     @Transactional(readOnly = true)
-    public PublicTimeslotsDto getAvailableTimes(Long branchId, Long topicId, LocalDate date, int slotStepMinutes) {
-        validateSlotStep(slotStepMinutes);
+    public PublicTimeslotsDto getAvailableTimes(Long branchId, Long topicId, LocalDate date, int appointmentDurationMinutes) {
+        validateAppointmentDuration(appointmentDurationMinutes);
         Branch branch = findActiveBranch(branchId);
         ServiceType topic = findActiveTopic(topicId);
         ensureTopicCanBeBookedAtBranch(branch, topic);
@@ -114,7 +114,7 @@ public class PublicBookingService {
         List<Employee> eligibleEmployees = employeeRepository.findActiveByBranchAndServiceType(branchId, topicId);
         LocalTime openTime = effectiveOpenTime(hours);
         LocalTime closeTime = effectiveCloseTime(hours);
-        List<String> allSlots = buildCandidateSlots(openTime, closeTime, slotStepMinutes);
+        List<String> allSlots = buildCandidateSlots(openTime, closeTime);
 
         ZonedDateTime openAt = dateTimeAtZone(date, openTime, branchZone);
         ZonedDateTime closeAt = dateTimeAtZone(date, closeTime, branchZone);
@@ -133,14 +133,14 @@ public class PublicBookingService {
             LocalTime startTime = LocalTime.parse(candidate, SLOT_FORMAT);
             LocalDateTime slotCursor = LocalDateTime.of(date, startTime);
             ZonedDateTime slotStart = slotCursor.atZone(branchZone);
-            ZonedDateTime slotEnd = slotStart.plusMinutes(topic.getDefaultDurationMinutes());
+            ZonedDateTime slotEnd = slotStart.plusMinutes(appointmentDurationMinutes);
             Instant slotStartInstant = slotStart.toInstant();
             Instant slotEndInstant = slotEnd.toInstant();
 
             if (slotEnd.toLocalTime().isAfter(closeTime)) {
                 continue;
             }
-            boolean slotInventoryFree = isSlotInventoryFree(slotByTime, startTime, topic.getDefaultDurationMinutes());
+            boolean slotInventoryFree = isSlotInventoryFree(slotByTime, startTime, appointmentDurationMinutes);
             boolean slotHasEmployee = employeeIds.stream().anyMatch(employeeId ->
                     employeeAppointments.stream()
                             .filter(a -> a.getEmployee().getId().equals(employeeId))
@@ -154,7 +154,7 @@ public class PublicBookingService {
         }
 
         List<String> unavailable = allSlots.stream().filter(slot -> !available.contains(slot)).toList();
-        return new PublicTimeslotsDto(branchZone.getId(), slotStepMinutes, available, unavailable);
+        return new PublicTimeslotsDto(branchZone.getId(), appointmentDurationMinutes, available, unavailable);
     }
 
     @Transactional
@@ -164,11 +164,12 @@ public class PublicBookingService {
         ensureTopicCanBeBookedAtBranch(branch, topic);
 
         ZoneId branchZone = zoneFor(branch);
-        validateSlotBoundaries(request.startTime(), topic.getDefaultDurationMinutes());
+        validateAppointmentDuration(request.durationMinutes());
+        validateSlotBoundaries(request.startTime(), request.durationMinutes());
         BranchBusinessHours hours = findBusinessHours(branch.getId(), request.date());
 
         ZonedDateTime slotStart = dateTimeAtZone(request.date(), request.startTime(), branchZone);
-        ZonedDateTime slotEnd = slotStart.plusMinutes(topic.getDefaultDurationMinutes());
+        ZonedDateTime slotEnd = slotStart.plusMinutes(request.durationMinutes());
         validateWithinBusinessHours(slotStart.toLocalTime(), slotEnd.toLocalTime(), hours);
 
         Instant scheduledStart = slotStart.toInstant();
@@ -209,7 +210,7 @@ public class PublicBookingService {
                 topic.getId(),
                 request.date(),
                 request.startTime(),
-                topic.getDefaultDurationMinutes()
+                request.durationMinutes()
         );
         appointmentEmailService.sendBookingConfirmation(saved, branchZone);
         return new BookingResponseDto(saved.getId(), "Appointment booked successfully");
@@ -295,27 +296,27 @@ public class PublicBookingService {
     }
 
     private LocalTime effectiveOpenTime(BranchBusinessHours hours) {
-        return hours.getOpenTime().isAfter(DEMO_OPEN_TIME) ? hours.getOpenTime() : DEMO_OPEN_TIME;
+        return DEMO_OPEN_TIME;
     }
 
     private LocalTime effectiveCloseTime(BranchBusinessHours hours) {
-        return hours.getCloseTime().isBefore(DEMO_CLOSE_TIME) ? hours.getCloseTime() : DEMO_CLOSE_TIME;
+        return DEMO_CLOSE_TIME;
     }
 
-    private List<String> buildCandidateSlots(LocalTime openTime, LocalTime closeTime, int slotStepMinutes) {
+    private List<String> buildCandidateSlots(LocalTime openTime, LocalTime closeTime) {
         List<String> slots = new ArrayList<>();
         LocalTime cursor = openTime;
-        LocalTime latestStart = closeTime.minusMinutes(slotStepMinutes);
+        LocalTime latestStart = closeTime.minusMinutes(BASE_SLOT_MINUTES);
         while (!cursor.isAfter(latestStart)) {
             slots.add(cursor.format(SLOT_FORMAT));
-            cursor = cursor.plusMinutes(slotStepMinutes);
+            cursor = cursor.plusMinutes(BASE_SLOT_MINUTES);
         }
         return slots;
     }
 
-    private void validateSlotStep(int slotStepMinutes) {
-        if (slotStepMinutes != 30 && slotStepMinutes != 60) {
-            throw new ResponseStatusException(HttpStatus.BAD_REQUEST, "Slot interval must be either 30 or 60 minutes");
+    private void validateAppointmentDuration(int durationMinutes) {
+        if (durationMinutes != 30 && durationMinutes != 60) {
+            throw new ResponseStatusException(HttpStatus.BAD_REQUEST, "Appointment duration must be either 30 or 60 minutes");
         }
     }
 

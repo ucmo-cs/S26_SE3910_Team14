@@ -32,6 +32,7 @@ import java.time.LocalTime;
 import java.time.ZoneId;
 import java.time.ZonedDateTime;
 import java.time.Instant;
+import java.time.Duration;
 
 @Service
 public class CustomerAuthService {
@@ -139,7 +140,10 @@ public class CustomerAuthService {
 
         ZoneId branchZone = ZoneId.of(appointment.getBranch().getTimeZone());
         ZonedDateTime start = ZonedDateTime.of(request.date(), request.startTime(), branchZone);
-        int duration = appointment.getServiceType().getDefaultDurationMinutes();
+        int duration = (int) Duration.between(appointment.getScheduledStart(), appointment.getScheduledEnd()).toMinutes();
+        if (duration < 30 || duration % 30 != 0) {
+            duration = appointment.getServiceType().getDefaultDurationMinutes();
+        }
         ZonedDateTime end = start.plusMinutes(duration);
         Instant startInstant = start.toInstant();
         Instant endInstant = end.toInstant();

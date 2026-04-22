@@ -24,6 +24,7 @@ import org.springframework.web.server.ResponseStatusException;
 import java.time.LocalTime;
 import java.time.ZoneId;
 import java.time.ZonedDateTime;
+import java.time.Duration;
 import java.util.List;
 
 @Service
@@ -110,7 +111,10 @@ public class DashboardDataService {
 
         ZoneId branchZone = ZoneId.of(appointment.getBranch().getTimeZone());
         ZonedDateTime start = ZonedDateTime.of(request.date(), request.startTime(), branchZone);
-        int duration = appointment.getServiceType().getDefaultDurationMinutes();
+        int duration = (int) Duration.between(appointment.getScheduledStart(), appointment.getScheduledEnd()).toMinutes();
+        if (duration < 30 || duration % 30 != 0) {
+            duration = appointment.getServiceType().getDefaultDurationMinutes();
+        }
         ZonedDateTime end = start.plusMinutes(duration);
         BranchBusinessHours hours = branchBusinessHoursRepository.findByBranchIdAndDayOfWeekAndActiveTrue(
                 appointment.getBranch().getId(),

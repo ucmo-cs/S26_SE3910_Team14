@@ -43,9 +43,9 @@ public class PublicBookingController {
             @RequestParam Long branchId,
             @RequestParam Long topicId,
             @RequestParam @DateTimeFormat(iso = DateTimeFormat.ISO.DATE) LocalDate date,
-            @RequestParam(defaultValue = "30") int slotStepMinutes
+            @RequestParam(defaultValue = "30") int appointmentDurationMinutes
     ) {
-        return publicBookingService.getAvailableTimes(branchId, topicId, date, slotStepMinutes);
+        return publicBookingService.getAvailableTimes(branchId, topicId, date, appointmentDurationMinutes);
     }
 
     @PostMapping("/book")
