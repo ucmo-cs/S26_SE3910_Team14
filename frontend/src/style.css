@@ -1,12 +1,12 @@
+@import "tailwindcss";
+
 :root {
-  font-family: system-ui, sans-serif;
+  font-family: Inter, "Segoe UI", Tahoma, Geneva, Verdana, sans-serif;
   line-height: 1.5;
+  color: #0f172a;
+  background-color: #f1f5f9;
 }
 
 body {
   margin: 0;
-}
-
-.app-shell {
-  padding: 1.5rem;
 }
