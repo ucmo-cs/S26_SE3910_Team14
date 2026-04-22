@@ -109,6 +109,21 @@ public interface AppointmentRepository extends JpaRepository<Appointment, Long> 
             select count(a) > 0 from Appointment a
             where a.branch.id = :branchId
               and a.serviceType.id = :serviceTypeId
+              and a.status <> com.bankscheduling.appointment.entity.AppointmentStatus.CANCELLED
+              and a.scheduledStart < :scheduledEnd
+              and a.scheduledEnd > :scheduledStart
+            """)
+    boolean existsActiveBranchServiceOverlap(
+            @Param("branchId") Long branchId,
+            @Param("serviceTypeId") Long serviceTypeId,
+            @Param("scheduledStart") Instant scheduledStart,
+            @Param("scheduledEnd") Instant scheduledEnd
+    );
+
+    @Query("""
+            select count(a) > 0 from Appointment a
+            where a.branch.id = :branchId
+              and a.serviceType.id = :serviceTypeId
               and a.scheduledStart = :scheduledStart
               and a.id <> :appointmentId
               and a.status <> com.bankscheduling.appointment.entity.AppointmentStatus.CANCELLED
@@ -118,6 +133,23 @@ public interface AppointmentRepository extends JpaRepository<Appointment, Long> 
             @Param("serviceTypeId") Long serviceTypeId,
             @Param("scheduledStart") Instant scheduledStart,
             @Param("appointmentId") Long appointmentId
+    );
+
+    @Query("""
+            select count(a) > 0 from Appointment a
+            where a.branch.id = :branchId
+              and a.serviceType.id = :serviceTypeId
+              and a.id <> :appointmentId
+              and a.status <> com.bankscheduling.appointment.entity.AppointmentStatus.CANCELLED
+              and a.scheduledStart < :scheduledEnd
+              and a.scheduledEnd > :scheduledStart
+            """)
+    boolean existsActiveBranchServiceOverlapExcluding(
+            @Param("branchId") Long branchId,
+            @Param("serviceTypeId") Long serviceTypeId,
+            @Param("appointmentId") Long appointmentId,
+            @Param("scheduledStart") Instant scheduledStart,
+            @Param("scheduledEnd") Instant scheduledEnd
     );
 
     @Query("""

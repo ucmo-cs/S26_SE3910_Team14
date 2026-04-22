@@ -8,6 +8,24 @@ function addDays(baseDate: Date, days: number): Date {
   return copy;
 }
 
+function isWeekday(date: Date): boolean {
+  const day = date.getDay();
+  return day >= 1 && day <= 5;
+}
+
+function nextBusinessDates(count: number): Date[] {
+  const output: Date[] = [];
+  let offset = 0;
+  while (output.length < count) {
+    const candidate = addDays(new Date(), offset);
+    if (isWeekday(candidate)) {
+      output.push(candidate);
+    }
+    offset += 1;
+  }
+  return output;
+}
+
 function formatDate(date: Date): string {
   const year = date.getFullYear();
   const month = `${date.getMonth() + 1}`.padStart(2, '0');
@@ -29,6 +47,7 @@ export default function Step3DateTime() {
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState('');
   const [branchTimeZone, setBranchTimeZone] = useState('');
+  const [slotStepMinutes, setSlotStepMinutes] = useState<30 | 60>(30);
   const {
     selectedBranch,
     selectedTopic,
@@ -41,8 +60,12 @@ export default function Step3DateTime() {
   } = useBooking();
 
   const dateOptions = useMemo(
-    () => Array.from({ length: 7 }, (_, index) => addDays(new Date(), index)),
+    () => nextBusinessDates(7),
     [],
+  );
+  const displayedSlots = useMemo(
+    () => [...new Set([...slots, ...unavailableSlots])].sort((a, b) => a.localeCompare(b)),
+    [slots, unavailableSlots],
   );
 
   useEffect(() => {
@@ -54,7 +77,7 @@ export default function Step3DateTime() {
 
     setLoading(true);
     setError('');
-    getAvailableTimeslots(selectedBranch.id, selectedTopic.id, selectedDate)
+    getAvailableTimeslots(selectedBranch.id, selectedTopic.id, selectedDate, slotStepMinutes)
       .then((result) => {
         setSlots(result.slots);
         setUnavailableSlots(result.unavailableSlots ?? []);
@@ -62,7 +85,7 @@ export default function Step3DateTime() {
       })
       .catch(() => setError('Unable to load timeslots for this date. Please pick another date or retry.'))
       .finally(() => setLoading(false));
-  }, [selectedBranch, selectedTopic, selectedDate]);
+  }, [selectedBranch, selectedTopic, selectedDate, slotStepMinutes]);
 
   const handleTimePick = (time: string) => {
     setSelectedTime(time);
@@ -120,6 +143,30 @@ export default function Step3DateTime() {
 
       <div>
         <p className="mb-3 text-sm font-medium text-slate-700">Available Timeslots</p>
+        <div className="mb-3 flex gap-2">
+          <button
+            type="button"
+            onClick={() => setSlotStepMinutes(30)}
+            className={`rounded-full border px-3 py-1 text-xs ${
+              slotStepMinutes === 30
+                ? 'border-blue-900 bg-blue-900 text-white'
+                : 'border-slate-200 bg-white text-slate-700'
+            }`}
+          >
+            30-minute intervals
+          </button>
+          <button
+            type="button"
+            onClick={() => setSlotStepMinutes(60)}
+            className={`rounded-full border px-3 py-1 text-xs ${
+              slotStepMinutes === 60
+                ? 'border-blue-900 bg-blue-900 text-white'
+                : 'border-slate-200 bg-white text-slate-700'
+            }`}
+          >
+            60-minute intervals
+          </button>
+        </div>
         {loading ? (
           <div className="rounded-xl border border-slate-200 bg-white p-6 text-sm text-slate-500">
             Loading timeslots...
@@ -128,19 +175,15 @@ export default function Step3DateTime() {
           <div className="rounded-xl border border-red-200 bg-red-50 p-6 text-sm text-red-700">
             {error}
           </div>
-        ) : slots.length === 0 ? (
+        ) : displayedSlots.length === 0 ? (
           <div className="rounded-xl border border-slate-200 bg-white p-6 text-sm text-slate-500">
             No times are available for this date.
           </div>
         ) : (
           <div className="grid grid-cols-2 gap-3 sm:grid-cols-3 md:grid-cols-4">
-            {Array.from({ length: 16 }, (_, index) => {
-              const hour = 9 + Math.floor(index / 2);
-              const minute = index % 2 === 0 ? '00' : '30';
-              const slot = `${`${hour}`.padStart(2, '0')}:${minute}`;
-              const isAvailable = slots.includes(slot);
-              const isUnavailable = unavailableSlots.includes(slot) || !isAvailable;
+            {displayedSlots.map((slot) => {
               const isSelected = selectedTime === slot;
+              const isAvailable = slots.includes(slot);
               return (
                 <button
                   type="button"
@@ -150,9 +193,9 @@ export default function Step3DateTime() {
                   className={`rounded-full border px-3 py-2 text-sm transition ${
                     isSelected
                       ? 'border-blue-900 bg-blue-900 text-white'
-                      : isUnavailable
-                        ? 'border-slate-200 bg-slate-100 text-slate-400'
-                        : 'border-slate-200 bg-white text-slate-700 hover:border-blue-900'
+                      : isAvailable
+                        ? 'border-slate-200 bg-white text-slate-700 hover:border-blue-900'
+                        : 'border-slate-200 bg-slate-100 text-slate-400'
                   } disabled:cursor-not-allowed`}
                 >
                   {formatSlotLabel(slot)}

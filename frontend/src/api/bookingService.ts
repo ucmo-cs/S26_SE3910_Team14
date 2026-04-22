@@ -59,9 +59,10 @@ export async function getAvailableTimeslots(
   branchId: number,
   topicId: number,
   date: string,
+  slotStepMinutes: 30 | 60 = 30,
 ): Promise<TimeslotApiResponse> {
   const { data } = await apiClient.get<TimeslotApiResponse>(`${bookingBasePath}/times`, {
-    params: { branchId, topicId, date },
+    params: { branchId, topicId, date, slotStepMinutes },
   });
   return data;
 }

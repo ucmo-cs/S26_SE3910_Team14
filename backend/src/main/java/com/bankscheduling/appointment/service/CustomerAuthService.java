@@ -42,6 +42,7 @@ public class CustomerAuthService {
     private final AppointmentRepository appointmentRepository;
     private final RoleRepository roleRepository;
     private final BranchBusinessHoursRepository branchBusinessHoursRepository;
+    private final AppointmentSlotInventoryService appointmentSlotInventoryService;
 
     public CustomerAuthService(
             CustomerAccountRepository customerAccountRepository,
@@ -50,7 +51,8 @@ public class CustomerAuthService {
             JwtTokenProvider jwtTokenProvider,
             AppointmentRepository appointmentRepository,
             RoleRepository roleRepository,
-            BranchBusinessHoursRepository branchBusinessHoursRepository
+            BranchBusinessHoursRepository branchBusinessHoursRepository,
+            AppointmentSlotInventoryService appointmentSlotInventoryService
     ) {
         this.customerAccountRepository = customerAccountRepository;
         this.customerRepository = customerRepository;
@@ -59,6 +61,7 @@ public class CustomerAuthService {
         this.appointmentRepository = appointmentRepository;
         this.roleRepository = roleRepository;
         this.branchBusinessHoursRepository = branchBusinessHoursRepository;
+        this.appointmentSlotInventoryService = appointmentSlotInventoryService;
     }
 
     @Transactional
@@ -155,11 +158,12 @@ public class CustomerAuthService {
         if (startInstant.isBefore(Instant.now())) {
             throw new ResponseStatusException(HttpStatus.BAD_REQUEST, "Cannot book an appointment in the past");
         }
-        if (appointmentRepository.existsActiveBranchServiceStartExcluding(
+        if (appointmentRepository.existsActiveBranchServiceOverlapExcluding(
                 appointment.getBranch().getId(),
                 appointment.getServiceType().getId(),
+                appointment.getId(),
                 startInstant,
-                appointment.getId()
+                endInstant
         )) {
             throw new ResponseStatusException(HttpStatus.CONFLICT, "Selected timeslot is no longer available");
         }
@@ -182,6 +186,15 @@ public class CustomerAuthService {
         } catch (DataIntegrityViolationException ex) {
             throw new ResponseStatusException(HttpStatus.CONFLICT, "Selected timeslot is no longer available");
         }
+        appointmentSlotInventoryService.releaseSlots(saved.getId());
+        appointmentSlotInventoryService.reserveSlots(
+                saved,
+                saved.getBranch().getId(),
+                saved.getServiceType().getId(),
+                request.date(),
+                request.startTime(),
+                saved.getServiceType().getDefaultDurationMinutes()
+        );
         return new CustomerAppointmentDto(
                 saved.getId(),
                 saved.getServiceType().getDisplayName(),
@@ -201,7 +214,8 @@ public class CustomerAuthService {
             throw new ResponseStatusException(HttpStatus.FORBIDDEN, "You can only cancel your own appointments");
         }
         appointment.setStatus(AppointmentStatus.CANCELLED);
-        appointmentRepository.save(appointment);
+        Appointment saved = appointmentRepository.save(appointment);
+        appointmentSlotInventoryService.releaseSlots(saved.getId());
     }
 
     private CustomerAccount getCurrentAccount() {

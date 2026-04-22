@@ -32,17 +32,20 @@ public class DashboardDataService {
     private final AuditLogRepository auditLogRepository;
     private final CustomerAccountRepository customerAccountRepository;
     private final BranchBusinessHoursRepository branchBusinessHoursRepository;
+    private final AppointmentSlotInventoryService appointmentSlotInventoryService;
 
     public DashboardDataService(
             AppointmentRepository appointmentRepository,
             AuditLogRepository auditLogRepository,
             CustomerAccountRepository customerAccountRepository,
-            BranchBusinessHoursRepository branchBusinessHoursRepository
+            BranchBusinessHoursRepository branchBusinessHoursRepository,
+            AppointmentSlotInventoryService appointmentSlotInventoryService
     ) {
         this.appointmentRepository = appointmentRepository;
         this.auditLogRepository = auditLogRepository;
         this.customerAccountRepository = customerAccountRepository;
         this.branchBusinessHoursRepository = branchBusinessHoursRepository;
+        this.appointmentSlotInventoryService = appointmentSlotInventoryService;
     }
 
     @Transactional(readOnly = true)
@@ -121,11 +124,12 @@ public class DashboardDataService {
         if (start.toInstant().isBefore(java.time.Instant.now())) {
             throw new ResponseStatusException(HttpStatus.BAD_REQUEST, "Cannot book an appointment in the past");
         }
-        if (appointmentRepository.existsActiveBranchServiceStartExcluding(
+        if (appointmentRepository.existsActiveBranchServiceOverlapExcluding(
                 appointment.getBranch().getId(),
                 appointment.getServiceType().getId(),
+                appointment.getId(),
                 start.toInstant(),
-                appointment.getId()
+                end.toInstant()
         )) {
             throw new ResponseStatusException(HttpStatus.CONFLICT, "Selected timeslot is no longer available");
         }
@@ -157,6 +161,17 @@ public class DashboardDataService {
         } catch (DataIntegrityViolationException ex) {
             throw new ResponseStatusException(HttpStatus.CONFLICT, "Selected timeslot is no longer available");
         }
+        appointmentSlotInventoryService.releaseSlots(saved.getId());
+        if (saved.getStatus() != AppointmentStatus.CANCELLED) {
+            appointmentSlotInventoryService.reserveSlots(
+                    saved,
+                    saved.getBranch().getId(),
+                    saved.getServiceType().getId(),
+                    request.date(),
+                    request.startTime(),
+                    saved.getServiceType().getDefaultDurationMinutes()
+            );
+        }
         return new DashboardAppointmentDto(
                 saved.getId(),
                 saved.getCustomer().getFullName(),
@@ -173,6 +188,7 @@ public class DashboardDataService {
         Appointment appointment = appointmentRepository.findById(appointmentId)
                 .orElseThrow(() -> new ResponseStatusException(HttpStatus.NOT_FOUND, "Appointment not found"));
         appointmentRepository.delete(appointment);
+        appointmentSlotInventoryService.releaseSlots(appointmentId);
     }
 
     private static String normalizeRole(String raw) {
