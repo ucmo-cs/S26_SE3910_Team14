@@ -77,8 +77,18 @@ export default function LoginPage() {
           <button
             type="submit"
             disabled={loading}
-            className="w-full rounded-lg bg-blue-900 px-4 py-2.5 text-sm font-medium text-white hover:bg-blue-800 disabled:bg-slate-400"
+            className="icon-bounce-hover inline-flex w-full items-center justify-center gap-2 rounded-lg bg-blue-900 px-4 py-2.5 text-sm font-medium text-white hover:bg-blue-800 disabled:bg-slate-400"
           >
+            <svg viewBox="0 0 24 24" className="h-4 w-4" aria-hidden="true">
+              <path
+                d="M14 8l4 4-4 4M6 12h10M18 4h-6a2 2 0 0 0-2 2v1M18 20h-6a2 2 0 0 1-2-2v-1"
+                fill="none"
+                stroke="currentColor"
+                strokeWidth="1.7"
+                strokeLinecap="round"
+                strokeLinejoin="round"
+              />
+            </svg>
             {loading ? 'Signing in...' : 'Sign In'}
           </button>
         </form>

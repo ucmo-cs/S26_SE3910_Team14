@@ -105,3 +105,29 @@ main {
     0 1px 2px rgba(15, 23, 42, 0.6),
     0 16px 30px rgba(2, 6, 23, 0.7);
 }
+
+/* Status styles */
+:root[data-theme='dark'] .status-card-cancelled {
+  background-color: #7f1d1d !important;
+  border-color: #ef4444 !important;
+  color: #fee2e2 !important;
+}
+:root[data-theme='dark'] .status-pill-cancelled {
+  background-color: #991b1b !important;
+  border-color: #f87171 !important;
+  color: #fee2e2 !important;
+}
+
+/* Animated icon helpers */
+.icon-spin-hover:hover svg {
+  transform: rotate(180deg) scale(1.05);
+}
+.icon-spin-hover svg {
+  transition: transform 300ms ease;
+}
+.icon-bounce-hover:hover svg {
+  transform: translateX(2px);
+}
+.icon-bounce-hover svg {
+  transition: transform 220ms ease;
+}

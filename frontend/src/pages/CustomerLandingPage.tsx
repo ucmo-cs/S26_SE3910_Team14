@@ -17,18 +17,20 @@ export default function CustomerLandingPage() {
   const [appointments, setAppointments] = useState<CustomerAppointment[]>([]);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState('');
+  const [statusFilter, setStatusFilter] = useState('ALL');
   const [editingId, setEditingId] = useState<number | null>(null);
   const [editDate, setEditDate] = useState('');
   const [editTime, setEditTime] = useState('09:00');
 
   useEffect(() => {
-    getCustomerAppointments()
+    setLoading(true);
+    getCustomerAppointments(statusFilter)
       .then((data) => setAppointments(data))
       .catch((err) =>
         setError(getFriendlyErrorMessage(err, 'Unable to load appointments. Please try again soon.')),
       )
       .finally(() => setLoading(false));
-  }, []);
+  }, [statusFilter]);
 
   const handleCancel = async (appointmentId: number) => {
     try {
@@ -75,7 +77,20 @@ export default function CustomerLandingPage() {
         </section>
 
         <section className="rounded-2xl border border-slate-200 bg-white p-6 shadow-sm">
-          <h2 className="text-xl font-semibold text-blue-900">Your Appointments</h2>
+          <div className="flex flex-wrap items-center justify-between gap-3">
+            <h2 className="text-xl font-semibold text-blue-900">Your Appointments</h2>
+            <select
+              value={statusFilter}
+              onChange={(event) => setStatusFilter(event.target.value)}
+              className="rounded-lg border border-slate-200 px-3 py-2 text-sm"
+            >
+              <option value="ALL">All</option>
+              <option value="REQUESTED">Requested</option>
+              <option value="APPROVED">Approved</option>
+              <option value="COMPLETED">Completed</option>
+              <option value="CANCELLED">Cancelled</option>
+            </select>
+          </div>
           {loading ? (
             <div className="mt-4 space-y-3">
               <div className="h-16 animate-pulse rounded-xl bg-slate-100" />

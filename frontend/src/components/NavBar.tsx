@@ -60,9 +60,24 @@ export default function NavBar() {
           <button
             type="button"
             onClick={() => setDarkMode((prev) => !prev)}
-            className="rounded-md border border-slate-200 px-3 py-1.5 text-xs text-slate-700 hover:bg-slate-50"
+            className="icon-spin-hover inline-flex items-center gap-2 rounded-md border border-slate-200 px-3 py-1.5 text-xs text-slate-700 hover:bg-slate-50"
           >
-            {darkMode ? 'Light Mode' : 'Dark Mode'}
+            {darkMode ? (
+              <svg viewBox="0 0 24 24" className="h-4 w-4" aria-hidden="true">
+                <circle cx="12" cy="12" r="5" fill="currentColor" />
+                <g stroke="currentColor" strokeWidth="1.5" fill="none" strokeLinecap="round">
+                  <path d="M12 2v2.5M12 19.5V22M2 12h2.5M19.5 12H22M4.9 4.9l1.8 1.8M17.3 17.3l1.8 1.8M19.1 4.9l-1.8 1.8M6.7 17.3l-1.8 1.8" />
+                </g>
+              </svg>
+            ) : (
+              <svg viewBox="0 0 24 24" className="h-4 w-4" aria-hidden="true">
+                <path
+                  d="M20.2 15.1A8.5 8.5 0 1 1 8.9 3.8a7 7 0 1 0 11.3 11.3z"
+                  fill="currentColor"
+                />
+              </svg>
+            )}
+            {darkMode}
           </button>
           <span className="hidden rounded-full border border-slate-200 px-2 py-1 text-xs font-medium text-slate-700 md:inline">
             {role}
@@ -74,8 +89,18 @@ export default function NavBar() {
               logout();
               navigate('/login', { replace: true });
             }}
-            className="rounded-md border border-slate-200 px-3 py-1.5 text-sm text-slate-700 hover:bg-slate-50"
+            className="icon-bounce-hover inline-flex items-center gap-2 rounded-md border border-slate-200 px-3 py-1.5 text-sm text-slate-700 hover:bg-slate-50"
           >
+            <svg viewBox="0 0 24 24" className="h-4 w-4" aria-hidden="true">
+              <path
+                d="M10 4H6a2 2 0 0 0-2 2v12a2 2 0 0 0 2 2h4M14 16l4-4-4-4M8 12h10"
+                fill="none"
+                stroke="currentColor"
+                strokeWidth="1.7"
+                strokeLinecap="round"
+                strokeLinejoin="round"
+              />
+            </svg>
             Sign Out
           </button>
         </div>

@@ -34,6 +34,19 @@ public interface AppointmentRepository extends JpaRepository<Appointment, Long> 
     @Query("""
             select a from Appointment a
             join fetch a.branch
+            join fetch a.serviceType
+            where a.customer.id = :customerId
+              and (:status is null or a.status = :status)
+            order by a.scheduledStart asc
+            """)
+    List<Appointment> findAllByCustomerIdAndOptionalStatus(
+            @Param("customerId") Long customerId,
+            @Param("status") com.bankscheduling.appointment.entity.AppointmentStatus status
+    );
+
+    @Query("""
+            select a from Appointment a
+            join fetch a.branch
             join fetch a.customer
             join fetch a.employee
             join fetch a.serviceType

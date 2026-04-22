@@ -9,8 +9,10 @@ export type CustomerAppointment = {
   status: string;
 };
 
-export async function getCustomerAppointments(): Promise<CustomerAppointment[]> {
-  const response = await apiClient.get<CustomerAppointment[]>('/v1/customer/appointments');
+export async function getCustomerAppointments(status?: string): Promise<CustomerAppointment[]> {
+  const response = await apiClient.get<CustomerAppointment[]>('/v1/customer/appointments', {
+    params: status && status !== 'ALL' ? { status } : undefined,
+  });
   return response.data;
 }
 

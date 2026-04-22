@@ -105,10 +105,11 @@ public class CustomerAuthService {
     }
 
     @Transactional(readOnly = true)
-    public List<CustomerAppointmentDto> getCurrentCustomerAppointments() {
+    public List<CustomerAppointmentDto> getCurrentCustomerAppointments(String statusFilter) {
         CustomerAccount account = getCurrentAccount();
         Long customerId = account.getCustomer().getId();
-        return appointmentRepository.findAllByCustomerIdWithAssociationsOrdered(customerId).stream()
+        AppointmentStatus status = parseOptionalStatus(statusFilter);
+        return appointmentRepository.findAllByCustomerIdAndOptionalStatus(customerId, status).stream()
                 .map(appointment -> new CustomerAppointmentDto(
                         appointment.getId(),
                         appointment.getServiceType().getDisplayName(),
@@ -274,6 +275,17 @@ public class CustomerAuthService {
         }
         if (durationMinutes < 30 || durationMinutes % 30 != 0) {
             throw new ResponseStatusException(HttpStatus.BAD_REQUEST, "Service duration is not aligned with appointment slots");
+        }
+    }
+
+    private AppointmentStatus parseOptionalStatus(String raw) {
+        if (raw == null || raw.isBlank() || "ALL".equalsIgnoreCase(raw)) {
+            return null;
+        }
+        try {
+            return AppointmentStatus.valueOf(raw.trim().toUpperCase());
+        } catch (IllegalArgumentException ex) {
+            throw new ResponseStatusException(HttpStatus.BAD_REQUEST, "Invalid status filter");
         }
     }
 }
