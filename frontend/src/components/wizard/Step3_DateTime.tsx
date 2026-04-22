@@ -1,5 +1,5 @@
 import { useEffect, useMemo, useState } from 'react';
-import { getAvailableTimeslots } from '../../api/mockService';
+import { getAvailableTimeslots } from '../../api/bookingService';
 import { useBooking } from '../../context/BookingContext';
 
 function addDays(baseDate: Date, days: number): Date {
@@ -9,14 +9,28 @@ function addDays(baseDate: Date, days: number): Date {
 }
 
 function formatDate(date: Date): string {
-  return date.toISOString().split('T')[0];
+  const year = date.getFullYear();
+  const month = `${date.getMonth() + 1}`.padStart(2, '0');
+  const day = `${date.getDate()}`.padStart(2, '0');
+  return `${year}-${month}-${day}`;
+}
+
+function formatSlotLabel(slot: string): string {
+  const [hoursString, minutesString] = slot.split(':');
+  const hours = Number(hoursString);
+  const suffix = hours >= 12 ? 'PM' : 'AM';
+  const normalizedHours = hours % 12 === 0 ? 12 : hours % 12;
+  return `${normalizedHours}:${minutesString} ${suffix}`;
 }
 
 export default function Step3DateTime() {
   const [slots, setSlots] = useState<string[]>([]);
   const [loading, setLoading] = useState(false);
+  const [error, setError] = useState('');
+  const [branchTimeZone, setBranchTimeZone] = useState('');
   const {
     selectedBranch,
+    selectedTopic,
     selectedDate,
     selectedTime,
     setSelectedDate,
@@ -31,30 +45,44 @@ export default function Step3DateTime() {
   );
 
   useEffect(() => {
-    if (!selectedBranch || !selectedDate) {
+    if (!selectedBranch || !selectedTopic || !selectedDate) {
       setSlots([]);
       return;
     }
 
     setLoading(true);
-    getAvailableTimeslots(selectedBranch.id, selectedDate)
-      .then((result) => setSlots(result))
+    setError('');
+    getAvailableTimeslots(selectedBranch.id, selectedTopic.id, selectedDate)
+      .then((result) => {
+        setSlots(result.slots);
+        setBranchTimeZone(result.timeZone);
+      })
+      .catch(() => setError('Unable to load timeslots for this date. Please pick another date or retry.'))
       .finally(() => setLoading(false));
-  }, [selectedBranch, selectedDate]);
+  }, [selectedBranch, selectedTopic, selectedDate]);
+
+  const handleTimePick = (time: string) => {
+    setSelectedTime(time);
+    goToNextStep();
+  };
 
   if (!selectedBranch) {
     return (
-      <section className="rounded-xl border border-amber-200 bg-amber-50 p-6 text-sm text-amber-800">
+      <section className="rounded-xl border border-slate-200 bg-white p-6 text-sm text-slate-700">
         Please select a branch before choosing date and time.
       </section>
     );
   }
 
   return (
-    <section className="space-y-6">
+    <section className="space-y-6 rounded-2xl border border-slate-200 bg-white p-6 md:p-8">
       <header className="space-y-2">
-        <h2 className="text-2xl font-semibold text-slate-900">Select Date and Time</h2>
-        <p className="text-sm text-slate-600">Appointments are shown in your local timezone.</p>
+        <h2 className="text-2xl font-semibold text-blue-900">Pick Date and Time</h2>
+        <p className="text-sm text-slate-600">
+          {branchTimeZone
+            ? `Appointments shown in branch timezone: ${branchTimeZone}.`
+            : 'Choose a date to load branch availability.'}
+        </p>
       </header>
 
       <div>
@@ -74,10 +102,10 @@ export default function Step3DateTime() {
                 type="button"
                 key={isoDate}
                 onClick={() => setSelectedDate(isoDate)}
-                className={`min-w-28 rounded-lg border px-4 py-2 text-sm transition ${
+                className={`min-w-28 rounded-full border px-4 py-2 text-sm transition ${
                   isSelected
-                    ? 'border-blue-600 bg-blue-50 text-blue-800'
-                    : 'border-slate-200 bg-white text-slate-700 hover:border-blue-300'
+                    ? 'border-blue-900 bg-blue-900 text-white'
+                    : 'border-slate-200 bg-white text-slate-700 hover:border-blue-900'
                 }`}
               >
                 {label}
@@ -93,6 +121,14 @@ export default function Step3DateTime() {
           <div className="rounded-xl border border-slate-200 bg-white p-6 text-sm text-slate-500">
             Loading timeslots...
           </div>
+        ) : error ? (
+          <div className="rounded-xl border border-red-200 bg-red-50 p-6 text-sm text-red-700">
+            {error}
+          </div>
+        ) : slots.length === 0 ? (
+          <div className="rounded-xl border border-slate-200 bg-white p-6 text-sm text-slate-500">
+            No times are available for this date.
+          </div>
         ) : (
           <div className="grid grid-cols-2 gap-3 sm:grid-cols-3 md:grid-cols-4">
             {slots.map((slot) => {
@@ -101,14 +137,14 @@ export default function Step3DateTime() {
                 <button
                   type="button"
                   key={slot}
-                  onClick={() => setSelectedTime(slot)}
-                  className={`rounded-lg border px-3 py-2 text-sm transition ${
+                  onClick={() => handleTimePick(slot)}
+                  className={`rounded-full border px-3 py-2 text-sm transition ${
                     isSelected
-                      ? 'border-blue-600 bg-blue-50 text-blue-800'
-                      : 'border-slate-200 bg-white text-slate-700 hover:border-blue-300'
+                      ? 'border-blue-900 bg-blue-900 text-white'
+                      : 'border-slate-200 bg-white text-slate-700 hover:border-blue-900'
                   }`}
                 >
-                  {slot}
+                  {formatSlotLabel(slot)}
                 </button>
               );
             })}
@@ -123,14 +159,6 @@ export default function Step3DateTime() {
           className="rounded-lg border border-slate-300 bg-white px-5 py-2.5 text-sm font-medium text-slate-700 transition hover:bg-slate-50"
         >
           Back
-        </button>
-        <button
-          type="button"
-          onClick={goToNextStep}
-          disabled={!selectedDate || !selectedTime}
-          className="rounded-lg bg-blue-700 px-5 py-2.5 text-sm font-medium text-white transition hover:bg-blue-800 disabled:cursor-not-allowed disabled:bg-slate-300"
-        >
-          Continue
         </button>
       </div>
     </section>

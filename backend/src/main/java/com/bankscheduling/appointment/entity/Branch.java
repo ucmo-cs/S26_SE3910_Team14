@@ -38,6 +38,9 @@ public class Branch extends AuditableEntity {
     @Column(name = "phone_e164", length = 32)
     private String phoneE164;
 
+    @Column(name = "time_zone", nullable = false, length = 64)
+    private String timeZone = "America/Chicago";
+
     @Column(name = "active", nullable = false)
     private boolean active = true;
 
@@ -119,5 +122,13 @@ public class Branch extends AuditableEntity {
 
     public void setActive(boolean active) {
         this.active = active;
+    }
+
+    public String getTimeZone() {
+        return timeZone;
+    }
+
+    public void setTimeZone(String timeZone) {
+        this.timeZone = timeZone;
     }
 }

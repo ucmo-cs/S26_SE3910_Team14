@@ -5,6 +5,7 @@ import org.springframework.data.jpa.repository.JpaRepository;
 import org.springframework.data.jpa.repository.Query;
 import org.springframework.data.repository.query.Param;
 
+import java.time.Instant;
 import java.util.List;
 
 public interface AppointmentRepository extends JpaRepository<Appointment, Long> {
@@ -19,4 +20,44 @@ public interface AppointmentRepository extends JpaRepository<Appointment, Long> 
             order by a.scheduledStart asc
             """)
     List<Appointment> findAllByBranchIdWithAssociationsOrdered(@Param("branchId") Long branchId);
+
+    @Query("""
+            select a from Appointment a
+            where a.branch.id = :branchId
+              and a.scheduledStart < :dayEnd
+              and a.scheduledEnd > :dayStart
+            order by a.scheduledStart asc
+            """)
+    List<Appointment> findAllByBranchAndWindow(
+            @Param("branchId") Long branchId,
+            @Param("dayStart") Instant dayStart,
+            @Param("dayEnd") Instant dayEnd
+    );
+
+    @Query("""
+            select count(a) > 0 from Appointment a
+            where a.employee.id = :employeeId
+              and a.status <> com.bankscheduling.appointment.entity.AppointmentStatus.CANCELLED
+              and a.scheduledStart < :scheduledEnd
+              and a.scheduledEnd > :scheduledStart
+            """)
+    boolean existsEmployeeOverlap(
+            @Param("employeeId") Long employeeId,
+            @Param("scheduledStart") Instant scheduledStart,
+            @Param("scheduledEnd") Instant scheduledEnd
+    );
+
+    @Query("""
+            select a from Appointment a
+            where a.employee.id in :employeeIds
+              and a.status <> com.bankscheduling.appointment.entity.AppointmentStatus.CANCELLED
+              and a.scheduledStart < :windowEnd
+              and a.scheduledEnd > :windowStart
+            order by a.scheduledStart asc
+            """)
+    List<Appointment> findEmployeeOverlapsInWindow(
+            @Param("employeeIds") List<Long> employeeIds,
+            @Param("windowStart") Instant windowStart,
+            @Param("windowEnd") Instant windowEnd
+    );
 }

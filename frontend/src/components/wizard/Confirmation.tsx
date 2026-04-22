@@ -11,15 +11,15 @@ export default function Confirmation({ confirmationNumber, onBookAnother }: Conf
     useBooking();
 
   return (
-    <section className="space-y-6">
-      <div className="rounded-2xl border border-emerald-200 bg-emerald-50 p-6 text-center">
-        <CircleCheckBig className="mx-auto mb-4 h-12 w-12 text-emerald-600" />
-        <h2 className="text-2xl font-semibold text-slate-900">Appointment Confirmed</h2>
-        <p className="mt-2 text-sm text-slate-600">Your reservation has been successfully submitted.</p>
+    <section className="space-y-6 rounded-2xl border border-slate-200 bg-white p-6 md:p-8">
+      <div className="rounded-2xl border border-slate-200 bg-blue-900 p-6 text-center text-white">
+        <CircleCheckBig className="mx-auto mb-4 h-12 w-12 text-white" />
+        <h2 className="text-2xl font-semibold">Appointment Confirmed</h2>
+        <p className="mt-2 text-sm text-slate-100">Your reservation has been successfully submitted.</p>
       </div>
 
       <div className="rounded-xl border border-slate-200 bg-white p-6">
-        <h3 className="text-base font-semibold text-slate-900">Appointment Summary</h3>
+        <h3 className="text-base font-semibold text-blue-900">Appointment Summary</h3>
         <dl className="mt-4 grid grid-cols-1 gap-y-3 text-sm text-slate-700 md:grid-cols-2">
           <div>
             <dt className="font-medium text-slate-500">Confirmation Number</dt>
@@ -39,7 +39,7 @@ export default function Confirmation({ confirmationNumber, onBookAnother }: Conf
           </div>
           <div>
             <dt className="font-medium text-slate-500">Branch</dt>
-            <dd>{selectedBranch?.name}</dd>
+            <dd>{selectedBranch?.displayName}</dd>
           </div>
           <div>
             <dt className="font-medium text-slate-500">Date and Time</dt>
@@ -55,7 +55,7 @@ export default function Confirmation({ confirmationNumber, onBookAnother }: Conf
             resetBooking();
             onBookAnother();
           }}
-          className="rounded-lg bg-blue-700 px-5 py-2.5 text-sm font-medium text-white transition hover:bg-blue-800"
+          className="rounded-lg bg-blue-900 px-5 py-2.5 text-sm font-medium text-white transition hover:bg-blue-800"
         >
           Book Another Appointment
         </button>
