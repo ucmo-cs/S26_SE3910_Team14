@@ -21,6 +21,7 @@ import java.io.IOException;
 import java.util.ArrayList;
 import java.util.Arrays;
 import java.util.List;
+import java.util.Optional;
 
 /**
  * Extracts the short-lived access JWT from an HttpOnly cookie and hydrates the {@link SecurityContextHolder}.
@@ -48,7 +49,7 @@ public class JwtAuthenticationFilter extends OncePerRequestFilter {
             return;
         }
 
-        readAccessCookie(request).ifPresent(token -> {
+        readToken(request).ifPresent(token -> {
             try {
                 Claims claims = jwtTokenProvider.parseAndValidate(token);
                 if (jwtTokenProvider.isRefreshToken(claims)) {
@@ -75,10 +76,27 @@ public class JwtAuthenticationFilter extends OncePerRequestFilter {
         filterChain.doFilter(request, response);
     }
 
-    private java.util.Optional<String> readAccessCookie(HttpServletRequest request) {
+    private Optional<String> readToken(HttpServletRequest request) {
+        Optional<String> bearer = readBearerToken(request);
+        if (bearer.isPresent()) {
+            return bearer;
+        }
+        return readAccessCookie(request);
+    }
+
+    private Optional<String> readBearerToken(HttpServletRequest request) {
+        String header = request.getHeader("Authorization");
+        if (header == null || !header.startsWith("Bearer ")) {
+            return Optional.empty();
+        }
+        String token = header.substring(7).trim();
+        return token.isEmpty() ? Optional.empty() : Optional.of(token);
+    }
+
+    private Optional<String> readAccessCookie(HttpServletRequest request) {
         Cookie[] cookies = request.getCookies();
         if (cookies == null) {
-            return java.util.Optional.empty();
+            return Optional.empty();
         }
         return Arrays.stream(cookies)
                 .filter(c -> JwtCookieNames.ACCESS_TOKEN.equals(c.getName()))

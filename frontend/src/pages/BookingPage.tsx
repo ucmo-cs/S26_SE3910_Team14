@@ -1,4 +1,5 @@
 import { useEffect, useRef, useState } from 'react';
+import NavBar from '../components/NavBar';
 import Confirmation from '../components/wizard/Confirmation';
 import Step1Topics from '../components/wizard/Step1_Topics';
 import Step2Locations from '../components/wizard/Step2_Locations';
@@ -68,8 +69,9 @@ export default function BookingPage() {
   };
 
   return (
-    <main className="min-h-screen bg-slate-100 px-4 py-8 md:px-8">
-      <div className="mx-auto w-full max-w-5xl rounded-2xl border border-slate-200 bg-white p-6 shadow-sm md:p-8">
+    <main className="min-h-screen bg-slate-100">
+      <NavBar />
+      <div className="mx-auto mt-8 w-full max-w-5xl rounded-2xl border border-slate-200 bg-white p-6 shadow-sm md:p-8">
         <header className="mb-8">
           <h1 className="text-3xl font-semibold text-blue-900">Central Bank Appointment Booking</h1>
           <p className="mt-2 text-sm text-slate-600">

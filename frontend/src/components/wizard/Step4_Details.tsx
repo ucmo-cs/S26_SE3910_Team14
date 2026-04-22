@@ -1,14 +1,16 @@
 import { LoaderCircle } from 'lucide-react';
-import { useState, type FormEvent } from 'react';
-import axios from 'axios';
+import { useEffect, useState, type FormEvent } from 'react';
 import { submitAppointment } from '../../api/bookingService';
+import { useAuth } from '../../context/AuthProvider';
 import { useBooking } from '../../context/BookingContext';
+import { getFriendlyErrorMessage } from '../../utils/httpError';
 
 type Step4DetailsProps = {
   onSubmitted: (appointmentId: string) => void;
 };
 
 export default function Step4Details({ onSubmitted }: Step4DetailsProps) {
+  const { user } = useAuth();
   const {
     selectedTopic,
     selectedBranch,
@@ -20,6 +22,26 @@ export default function Step4Details({ onSubmitted }: Step4DetailsProps) {
   } = useBooking();
   const [submitting, setSubmitting] = useState(false);
   const [error, setError] = useState('');
+
+  useEffect(() => {
+    if (!user) {
+      return;
+    }
+
+    const shouldHydrate =
+      !customerDetails.firstName.trim() &&
+      !customerDetails.lastName.trim() &&
+      !customerDetails.email.trim();
+    if (!shouldHydrate) {
+      return;
+    }
+
+    setCustomerDetails({
+      firstName: user.firstName ?? '',
+      lastName: user.lastName ?? '',
+      email: user.email ?? '',
+    });
+  }, [user, customerDetails.firstName, customerDetails.lastName, customerDetails.email, setCustomerDetails]);
 
   const canSubmit =
     selectedTopic &&
@@ -48,11 +70,7 @@ export default function Step4Details({ onSubmitted }: Step4DetailsProps) {
       });
       onSubmitted(String(response.appointmentId));
     } catch (error) {
-      if (axios.isAxiosError(error)) {
-        setError(error.response?.data?.message ?? 'Unable to submit your appointment right now.');
-      } else {
-        setError('Unable to submit your appointment right now. Please try again.');
-      }
+      setError(getFriendlyErrorMessage(error, 'Unable to submit your appointment right now.'));
     } finally {
       setSubmitting(false);
     }
@@ -63,6 +81,21 @@ export default function Step4Details({ onSubmitted }: Step4DetailsProps) {
       <header className="space-y-2">
         <h2 className="text-2xl font-semibold text-blue-900">Enter Contact Details</h2>
         <p className="text-sm text-slate-600">Provide your contact information to confirm.</p>
+        {user ? (
+          <button
+            type="button"
+            onClick={() =>
+              setCustomerDetails({
+                firstName: user.firstName ?? '',
+                lastName: user.lastName ?? '',
+                email: user.email ?? '',
+              })
+            }
+            className="rounded-md border border-slate-200 px-3 py-1.5 text-xs font-medium text-slate-700 hover:bg-slate-50"
+          >
+            Use account details
+          </button>
+        ) : null}
       </header>
 
       <form onSubmit={handleSubmit} className="space-y-4">

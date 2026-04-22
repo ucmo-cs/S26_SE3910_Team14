@@ -13,3 +13,17 @@ export const apiClient = axios.create({
     'Content-Type': 'application/json',
   },
 });
+
+apiClient.interceptors.response.use(
+  (response) => response,
+  (error) => {
+    const status = error?.response?.status;
+    const url: string = error?.config?.url ?? '';
+    const isAuthEndpoint = url.includes('/login') || url.includes('/register');
+    if (status === 401 && !isAuthEndpoint) {
+      localStorage.removeItem('customerAccessToken');
+      window.location.href = '/login?reason=session-expired';
+    }
+    return Promise.reject(error);
+  },
+);

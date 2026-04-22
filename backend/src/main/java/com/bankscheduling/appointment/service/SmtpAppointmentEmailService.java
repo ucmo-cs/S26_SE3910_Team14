@@ -41,19 +41,28 @@ public class SmtpAppointmentEmailService implements AppointmentEmailService {
         SimpleMailMessage message = new SimpleMailMessage();
         message.setFrom(fromAddress);
         message.setTo(customer.getEmail());
-        message.setSubject("Central Bank Appointment Confirmation");
+        message.setSubject("Central Bank | Appointment Confirmation #" + appointment.getId());
         message.setText("""
-                Hello %s,
+                Dear %s,
 
-                Your appointment has been confirmed.
+                Thank you for scheduling with Central Bank. Your appointment is now confirmed.
 
-                Confirmation ID: %s
-                Topic: %s
-                Branch: %s
-                Date: %s
-                Time: %s
+                ------------------------------------------------------------
+                APPOINTMENT DETAILS
+                ------------------------------------------------------------
+                Confirmation Number : %s
+                Service             : %s
+                Branch              : %s
+                Date                : %s
+                Time                : %s
+                ------------------------------------------------------------
 
-                Thank you for choosing Central Bank.
+                Please arrive 10 minutes early and bring a valid photo ID.
+                If you need to reschedule or cancel, please use the appointment portal.
+
+                Sincerely,
+                Central Bank Client Services
+                This is an automated service message. Please do not reply.
                 """.formatted(
                 customer.getFullName(),
                 appointment.getId(),
