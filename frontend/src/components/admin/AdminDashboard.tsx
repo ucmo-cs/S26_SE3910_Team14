@@ -160,7 +160,15 @@ export default function AdminDashboard({
                       ) : null}
                     </div>
                   </td>
-                  <td className="py-2 text-slate-600">{new Date(item.scheduledAt).toLocaleString()}</td>
+                  <td className="py-2 text-slate-600">
+                    {new Date(item.scheduledAt).toLocaleString(undefined, {
+                      year: 'numeric',
+                      month: 'short',
+                      day: 'numeric',
+                      hour: '2-digit',
+                      minute: '2-digit',
+                    })}
+                  </td>
                 </tr>
               ))
             )}

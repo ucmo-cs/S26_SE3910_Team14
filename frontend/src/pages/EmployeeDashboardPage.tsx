@@ -85,7 +85,13 @@ export default function EmployeeDashboardPage() {
                       <p className="text-sm text-slate-600">{appointment.branch}</p>
                     </div>
                     <p className="text-sm text-slate-600">
-                      {new Date(appointment.scheduledAt).toLocaleString()}
+                      {new Date(appointment.scheduledAt).toLocaleString(undefined, {
+                        year: 'numeric',
+                        month: 'short',
+                        day: 'numeric',
+                        hour: '2-digit',
+                        minute: '2-digit',
+                      })}
                     </p>
                   </div>
                   <AppointmentStatusTimeline status={appointment.status} />

@@ -112,8 +112,18 @@ export default function CustomerLandingPage() {
                   <p className="text-sm font-medium text-blue-900">{appointment.topic}</p>
                   <p className="text-sm text-slate-700">{appointment.branch}</p>
                   <p className="text-sm text-slate-600">
-                    {new Date(appointment.scheduledStart).toLocaleString()} -{' '}
-                    {new Date(appointment.scheduledEnd).toLocaleTimeString()}
+                    {new Date(appointment.scheduledStart).toLocaleString(undefined, {
+                      year: 'numeric',
+                      month: 'short',
+                      day: 'numeric',
+                      hour: '2-digit',
+                      minute: '2-digit',
+                    })}{' '}
+                    -{' '}
+                    {new Date(appointment.scheduledEnd).toLocaleTimeString(undefined, {
+                      hour: '2-digit',
+                      minute: '2-digit',
+                    })}
                   </p>
                   <span
                     className={`mt-2 inline-flex rounded-full border px-2 py-0.5 text-xs font-medium ${getStatusPillClass(appointment.status)}`}
@@ -165,13 +175,15 @@ export default function CustomerLandingPage() {
                           Edit
                         </button>
                       ) : null}
-                      <button
-                        type="button"
-                        onClick={() => handleCancel(appointment.appointmentId)}
-                        className="rounded-md border border-red-200 px-3 py-1.5 text-xs text-red-700 hover:bg-red-50"
-                      >
-                        Cancel
-                      </button>
+                      {appointment.status !== 'CANCELLED' && appointment.status !== 'COMPLETED' ? (
+                        <button
+                          type="button"
+                          onClick={() => handleCancel(appointment.appointmentId)}
+                          className="rounded-md border border-red-200 px-3 py-1.5 text-xs text-red-700 hover:bg-red-50"
+                        >
+                          Cancel
+                        </button>
+                      ) : null}
                     </div>
                   )}
                 </article>
