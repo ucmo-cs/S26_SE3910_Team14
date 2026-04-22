@@ -83,7 +83,10 @@ public interface AppointmentRepository extends JpaRepository<Appointment, Long> 
               and a.serviceType.id = :serviceTypeId
               and a.scheduledStart >= :dayStart
               and a.scheduledStart < :dayEnd
-              and a.status <> com.bankscheduling.appointment.entity.AppointmentStatus.CANCELLED
+              and a.status in (
+                    com.bankscheduling.appointment.entity.AppointmentStatus.REQUESTED,
+                    com.bankscheduling.appointment.entity.AppointmentStatus.APPROVED
+              )
             """)
     List<Appointment> findActiveByBranchServiceAndDayWindow(
             @Param("branchId") Long branchId,
@@ -97,7 +100,10 @@ public interface AppointmentRepository extends JpaRepository<Appointment, Long> 
             where a.branch.id = :branchId
               and a.serviceType.id = :serviceTypeId
               and a.scheduledStart = :scheduledStart
-              and a.status <> com.bankscheduling.appointment.entity.AppointmentStatus.CANCELLED
+              and a.status in (
+                    com.bankscheduling.appointment.entity.AppointmentStatus.REQUESTED,
+                    com.bankscheduling.appointment.entity.AppointmentStatus.APPROVED
+              )
             """)
     boolean existsActiveBranchServiceStart(
             @Param("branchId") Long branchId,
@@ -110,6 +116,10 @@ public interface AppointmentRepository extends JpaRepository<Appointment, Long> 
             where a.branch.id = :branchId
               and a.serviceType.id = :serviceTypeId
               and a.status <> com.bankscheduling.appointment.entity.AppointmentStatus.CANCELLED
+              and a.status in (
+                    com.bankscheduling.appointment.entity.AppointmentStatus.REQUESTED,
+                    com.bankscheduling.appointment.entity.AppointmentStatus.APPROVED
+              )
               and a.scheduledStart < :scheduledEnd
               and a.scheduledEnd > :scheduledStart
             """)
@@ -126,7 +136,10 @@ public interface AppointmentRepository extends JpaRepository<Appointment, Long> 
               and a.serviceType.id = :serviceTypeId
               and a.scheduledStart = :scheduledStart
               and a.id <> :appointmentId
-              and a.status <> com.bankscheduling.appointment.entity.AppointmentStatus.CANCELLED
+              and a.status in (
+                    com.bankscheduling.appointment.entity.AppointmentStatus.REQUESTED,
+                    com.bankscheduling.appointment.entity.AppointmentStatus.APPROVED
+              )
             """)
     boolean existsActiveBranchServiceStartExcluding(
             @Param("branchId") Long branchId,
@@ -140,7 +153,10 @@ public interface AppointmentRepository extends JpaRepository<Appointment, Long> 
             where a.branch.id = :branchId
               and a.serviceType.id = :serviceTypeId
               and a.id <> :appointmentId
-              and a.status <> com.bankscheduling.appointment.entity.AppointmentStatus.CANCELLED
+              and a.status in (
+                    com.bankscheduling.appointment.entity.AppointmentStatus.REQUESTED,
+                    com.bankscheduling.appointment.entity.AppointmentStatus.APPROVED
+              )
               and a.scheduledStart < :scheduledEnd
               and a.scheduledEnd > :scheduledStart
             """)
@@ -155,7 +171,10 @@ public interface AppointmentRepository extends JpaRepository<Appointment, Long> 
     @Query("""
             select count(a) > 0 from Appointment a
             where a.employee.id = :employeeId
-              and a.status <> com.bankscheduling.appointment.entity.AppointmentStatus.CANCELLED
+              and a.status in (
+                    com.bankscheduling.appointment.entity.AppointmentStatus.REQUESTED,
+                    com.bankscheduling.appointment.entity.AppointmentStatus.APPROVED
+              )
               and a.scheduledStart < :scheduledEnd
               and a.scheduledEnd > :scheduledStart
             """)
@@ -169,7 +188,10 @@ public interface AppointmentRepository extends JpaRepository<Appointment, Long> 
             select count(a) > 0 from Appointment a
             where a.employee.id = :employeeId
               and a.id <> :appointmentId
-              and a.status <> com.bankscheduling.appointment.entity.AppointmentStatus.CANCELLED
+              and a.status in (
+                    com.bankscheduling.appointment.entity.AppointmentStatus.REQUESTED,
+                    com.bankscheduling.appointment.entity.AppointmentStatus.APPROVED
+              )
               and a.scheduledStart < :scheduledEnd
               and a.scheduledEnd > :scheduledStart
             """)
@@ -183,7 +205,10 @@ public interface AppointmentRepository extends JpaRepository<Appointment, Long> 
     @Query("""
             select a from Appointment a
             where a.employee.id in :employeeIds
-              and a.status <> com.bankscheduling.appointment.entity.AppointmentStatus.CANCELLED
+              and a.status in (
+                    com.bankscheduling.appointment.entity.AppointmentStatus.REQUESTED,
+                    com.bankscheduling.appointment.entity.AppointmentStatus.APPROVED
+              )
               and a.scheduledStart < :windowEnd
               and a.scheduledEnd > :windowStart
             order by a.scheduledStart asc

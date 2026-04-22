@@ -32,6 +32,7 @@ public interface AppointmentSlotInventoryRepository extends JpaRepository<Appoin
 
     @Query("""
             select s from AppointmentSlotInventory s
+            left join fetch s.appointment
             where s.branch.id = :branchId
               and s.serviceType.id = :serviceTypeId
               and s.slotDate = :slotDate
@@ -46,6 +47,7 @@ public interface AppointmentSlotInventoryRepository extends JpaRepository<Appoin
     @Lock(LockModeType.PESSIMISTIC_WRITE)
     @Query("""
             select s from AppointmentSlotInventory s
+            left join fetch s.appointment
             where s.branch.id = :branchId
               and s.serviceType.id = :serviceTypeId
               and s.slotDate = :slotDate
