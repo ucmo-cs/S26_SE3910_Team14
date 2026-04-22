@@ -140,7 +140,9 @@ public class DashboardDataService {
 
         if (request.status() != null && !request.status().isBlank()) {
             try {
-                appointment.setStatus(AppointmentStatus.valueOf(request.status().trim().toUpperCase()));
+                AppointmentStatus targetStatus = AppointmentStatus.valueOf(request.status().trim().toUpperCase());
+                validateStaffStatusTransition(appointment.getStatus(), targetStatus);
+                appointment.setStatus(targetStatus);
             } catch (IllegalArgumentException ex) {
                 throw new ResponseStatusException(HttpStatus.BAD_REQUEST, "Invalid appointment status");
             }
@@ -207,5 +209,21 @@ public class DashboardDataService {
         if (durationMinutes < 30 || durationMinutes % 30 != 0) {
             throw new ResponseStatusException(HttpStatus.BAD_REQUEST, "Service duration is not aligned with appointment slots");
         }
+    }
+
+    private void validateStaffStatusTransition(AppointmentStatus current, AppointmentStatus target) {
+        if (target == AppointmentStatus.CANCELLED) {
+            return;
+        }
+        if (current == AppointmentStatus.REQUESTED && target == AppointmentStatus.APPROVED) {
+            return;
+        }
+        if (current == AppointmentStatus.APPROVED && target == AppointmentStatus.COMPLETED) {
+            return;
+        }
+        if (current == target) {
+            return;
+        }
+        throw new ResponseStatusException(HttpStatus.BAD_REQUEST, "Unsupported status transition");
     }
 }

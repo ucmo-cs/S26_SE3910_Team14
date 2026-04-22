@@ -5,8 +5,8 @@ import com.bankscheduling.appointment.dto.customerauth.CustomerAppointmentDto;
 import com.bankscheduling.appointment.dto.customerauth.CustomerProfileDto;
 import com.bankscheduling.appointment.service.CustomerAuthService;
 import jakarta.validation.Valid;
-import org.springframework.web.bind.annotation.DeleteMapping;
 import org.springframework.web.bind.annotation.GetMapping;
+import org.springframework.web.bind.annotation.PatchMapping;
 import org.springframework.web.bind.annotation.PathVariable;
 import org.springframework.web.bind.annotation.PutMapping;
 import org.springframework.web.bind.annotation.RequestBody;
@@ -42,8 +42,8 @@ public class CustomerPortalController {
         return customerAuthService.updateCurrentCustomerAppointment(appointmentId, request);
     }
 
-    @DeleteMapping("/appointments/{appointmentId}")
-    public void deleteAppointment(@PathVariable Long appointmentId) {
-        customerAuthService.deleteCurrentCustomerAppointment(appointmentId);
+    @PatchMapping("/appointments/{appointmentId}/cancel")
+    public void cancelAppointment(@PathVariable Long appointmentId) {
+        customerAuthService.cancelCurrentCustomerAppointment(appointmentId);
     }
 }

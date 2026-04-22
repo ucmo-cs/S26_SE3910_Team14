@@ -1,6 +1,7 @@
 import { useMemo, useState } from 'react';
 import type { DashboardAppointment, DashboardUser } from '../../api/adminService';
 import { toggleUserLock } from '../../api/adminService';
+import { getStatusPillClass } from '../../utils/appointmentStatus';
 
 type AdminDashboardProps = {
   appointments: DashboardAppointment[];
@@ -116,7 +117,9 @@ export default function AdminDashboard({
                   <td className="py-2 pr-4 text-slate-700">{item.customer}</td>
                   <td className="py-2 pr-4 text-slate-700">{item.service}</td>
                   <td className="py-2 pr-4">
-                    <span className="rounded-full border border-slate-200 px-2 py-0.5 text-xs text-slate-700">
+                    <span
+                      className={`rounded-full border px-2 py-0.5 text-xs ${getStatusPillClass(item.status)}`}
+                    >
                       {item.status}
                     </span>
                   </td>
