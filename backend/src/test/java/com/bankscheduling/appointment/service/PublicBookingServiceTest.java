@@ -2,6 +2,7 @@ package com.bankscheduling.appointment.service;
 
 import com.bankscheduling.appointment.dto.publicbooking.PublicBranchDto;
 import com.bankscheduling.appointment.dto.publicbooking.PublicTimeslotsDto;
+import com.bankscheduling.appointment.entity.AppointmentSlotInventory;
 import com.bankscheduling.appointment.entity.Branch;
 import com.bankscheduling.appointment.entity.BranchBusinessHours;
 import com.bankscheduling.appointment.entity.Employee;
@@ -50,6 +51,8 @@ class PublicBookingServiceTest {
     private BranchBusinessHoursRepository branchBusinessHoursRepository;
     @Mock
     private AppointmentEmailService appointmentEmailService;
+    @Mock
+    private AppointmentSlotInventoryService appointmentSlotInventoryService;
 
     private PublicBookingService publicBookingService;
 
@@ -63,7 +66,8 @@ class PublicBookingServiceTest {
                 customerRepository,
                 customerAccountRepository,
                 branchBusinessHoursRepository,
-                appointmentEmailService
+                appointmentEmailService,
+                appointmentSlotInventoryService
         );
     }
 
@@ -104,15 +108,19 @@ class PublicBookingServiceTest {
         when(branchRepository.findActiveByServiceType(10L)).thenReturn(List.of(branch));
         when(branchBusinessHoursRepository.findByBranchIdAndDayOfWeekAndActiveTrue(1L, 1)).thenReturn(Optional.of(mondayHours));
         when(employeeRepository.findActiveByBranchAndServiceType(1L, 10L)).thenReturn(List.of(employee));
-        when(appointmentRepository.findEmployeeOverlapsInWindow(eq(List.of(50L)), any(), any())).thenReturn(List.of());
+        when(appointmentSlotInventoryService.getDaySlots(1L, 10L, date)).thenReturn(List.of(
+                buildOpenSlot(branch, topic, date, LocalTime.of(9, 0)),
+                buildOpenSlot(branch, topic, date, LocalTime.of(9, 30))
+        ));
 
-        PublicTimeslotsDto result = publicBookingService.getAvailableTimes(1L, 10L, date);
+        PublicTimeslotsDto result = publicBookingService.getAvailableTimes(1L, 10L, date, 30);
 
         assertEquals("America/Chicago", result.timeZone());
+        assertEquals(30, result.slotDurationMinutes());
         assertEquals(2, result.slots().size());
-        assertEquals("08:00", result.slots().get(0));
-        assertEquals("08:30", result.slots().get(1));
-        assertFalse(result.slots().contains("09:00"));
+        assertEquals("09:00", result.slots().get(0));
+        assertEquals("09:30", result.slots().get(1));
+        assertFalse(result.slots().contains("10:00"));
     }
 
     private Branch buildBranch(Long id, String name) {
@@ -122,5 +130,14 @@ class PublicBookingServiceTest {
         branch.setActive(true);
         branch.setTimeZone("America/Chicago");
         return branch;
+    }
+
+    private AppointmentSlotInventory buildOpenSlot(Branch branch, ServiceType topic, LocalDate date, LocalTime startTime) {
+        AppointmentSlotInventory slot = new AppointmentSlotInventory();
+        slot.setBranch(branch);
+        slot.setServiceType(topic);
+        slot.setSlotDate(date);
+        slot.setSlotStartTime(startTime);
+        return slot;
     }
 }

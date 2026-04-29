@@ -40,7 +40,7 @@ export default function RegisterPage() {
       <div className="mx-auto w-full max-w-md rounded-2xl border border-slate-200 bg-white p-8 shadow-sm">
         <h1 className="text-2xl font-semibold text-blue-900">Customer Registration</h1>
         <p className="mt-2 text-sm text-slate-600">
-          Create your Central Bank customer account.
+          Create your Commerce Bank customer account.
         </p>
         <form className="mt-6 space-y-4" onSubmit={handleSubmit}>
           <div className="grid grid-cols-2 gap-3">
