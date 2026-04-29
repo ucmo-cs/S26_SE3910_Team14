@@ -9,14 +9,12 @@ import com.bankscheduling.appointment.dto.appointment.CustomerAppointmentUpdateR
 import com.bankscheduling.appointment.entity.Appointment;
 import com.bankscheduling.appointment.entity.AppointmentStatus;
 import com.bankscheduling.appointment.entity.BranchBusinessHours;
-import com.bankscheduling.appointment.entity.Customer;
-import com.bankscheduling.appointment.entity.CustomerAccount;
 import com.bankscheduling.appointment.entity.Role;
+import com.bankscheduling.appointment.entity.User;
 import com.bankscheduling.appointment.repository.AppointmentRepository;
 import com.bankscheduling.appointment.repository.BranchBusinessHoursRepository;
-import com.bankscheduling.appointment.repository.CustomerAccountRepository;
-import com.bankscheduling.appointment.repository.CustomerRepository;
 import com.bankscheduling.appointment.repository.RoleRepository;
+import com.bankscheduling.appointment.repository.UserRepository;
 import org.springframework.dao.DataIntegrityViolationException;
 import com.bankscheduling.appointment.security.jwt.JwtTokenProvider;
 import org.springframework.http.HttpStatus;
@@ -36,8 +34,7 @@ import java.time.Duration;
 
 @Service
 public class CustomerAuthService {
-    private final CustomerAccountRepository customerAccountRepository;
-    private final CustomerRepository customerRepository;
+    private final UserRepository userRepository;
     private final PasswordEncoder passwordEncoder;
     private final JwtTokenProvider jwtTokenProvider;
     private final AppointmentRepository appointmentRepository;
@@ -46,8 +43,7 @@ public class CustomerAuthService {
     private final AppointmentSlotInventoryService appointmentSlotInventoryService;
 
     public CustomerAuthService(
-            CustomerAccountRepository customerAccountRepository,
-            CustomerRepository customerRepository,
+            UserRepository userRepository,
             PasswordEncoder passwordEncoder,
             JwtTokenProvider jwtTokenProvider,
             AppointmentRepository appointmentRepository,
@@ -55,8 +51,7 @@ public class CustomerAuthService {
             BranchBusinessHoursRepository branchBusinessHoursRepository,
             AppointmentSlotInventoryService appointmentSlotInventoryService
     ) {
-        this.customerAccountRepository = customerAccountRepository;
-        this.customerRepository = customerRepository;
+        this.userRepository = userRepository;
         this.passwordEncoder = passwordEncoder;
         this.jwtTokenProvider = jwtTokenProvider;
         this.appointmentRepository = appointmentRepository;
@@ -68,50 +63,46 @@ public class CustomerAuthService {
     @Transactional
     public CustomerAuthResponse register(CustomerRegisterRequest request) {
         String normalizedEmail = normalizeEmail(request.email());
-        if (customerAccountRepository.findByEmailNormalized(normalizedEmail).isPresent()) {
+        if (userRepository.findByEmailNormalized(normalizedEmail).isPresent()) {
             throw new ResponseStatusException(HttpStatus.CONFLICT, "An account with that email already exists");
         }
 
-        Customer customer = new Customer();
-        customer.setFullName(request.firstName().trim() + " " + request.lastName().trim());
-        customer.setEmail(normalizedEmail);
-        customerRepository.save(customer);
+        User user = new User();
+        user.setEmailNormalized(normalizedEmail);
+        user.setPasswordHash(passwordEncoder.encode(request.password()));
+        user.setRole(resolveRoleOrThrow("ROLE_CUSTOMER"));
+        user.setFirstName(request.firstName().trim());
+        user.setLastName(request.lastName().trim());
+        user.setFullName(request.firstName().trim() + " " + request.lastName().trim());
+        userRepository.save(user);
 
-        CustomerAccount account = new CustomerAccount();
-        account.setCustomer(customer);
-        account.setEmailNormalized(normalizedEmail);
-        account.setPasswordHash(passwordEncoder.encode(request.password()));
-        account.setRole(resolveRoleOrThrow("ROLE_CUSTOMER"));
-        customerAccountRepository.save(account);
-
-        String token = jwtTokenProvider.createAccessToken(account.getId(), List.of(account.getRole().getName()));
-        return new CustomerAuthResponse(token, toCustomerProfile(account));
+        String token = jwtTokenProvider.createAccessToken(user.getId(), List.of(user.getRole().getName()));
+        return new CustomerAuthResponse(token, toCustomerProfile(user));
     }
 
     @Transactional(readOnly = true)
     public CustomerAuthResponse login(CustomerAuthRequest request) {
         String normalizedEmail = normalizeEmail(request.email());
-        CustomerAccount account = customerAccountRepository.findByEmailNormalized(normalizedEmail)
+        User account = userRepository.findByEmailNormalized(normalizedEmail)
                 .orElseThrow(() -> new ResponseStatusException(HttpStatus.UNAUTHORIZED, "Invalid email or password"));
         if (!account.isActive() || !passwordEncoder.matches(request.password(), account.getPasswordHash())) {
             throw new ResponseStatusException(HttpStatus.UNAUTHORIZED, "Invalid email or password");
         }
 
-        Customer customer = account.getCustomer();
         String token = jwtTokenProvider.createAccessToken(account.getId(), List.of(account.getRole().getName()));
         return new CustomerAuthResponse(token, toCustomerProfile(account));
     }
 
     @Transactional(readOnly = true)
     public CustomerProfileDto getCurrentCustomerProfile() {
-        CustomerAccount account = getCurrentAccount();
+        User account = getCurrentAccount();
         return toCustomerProfile(account);
     }
 
     @Transactional(readOnly = true)
     public List<CustomerAppointmentDto> getCurrentCustomerAppointments(String statusFilter) {
-        CustomerAccount account = getCurrentAccount();
-        Long customerId = account.getCustomer().getId();
+        User account = getCurrentAccount();
+        Long customerId = account.getId();
         AppointmentStatus status = parseOptionalStatus(statusFilter);
         return appointmentRepository.findAllByCustomerIdAndOptionalStatus(customerId, status).stream()
                 .map(appointment -> new CustomerAppointmentDto(
@@ -127,11 +118,11 @@ public class CustomerAuthService {
 
     @Transactional
     public CustomerAppointmentDto updateCurrentCustomerAppointment(Long appointmentId, CustomerAppointmentUpdateRequest request) {
-        CustomerAccount account = getCurrentAccount();
+        User account = getCurrentAccount();
         Appointment appointment = appointmentRepository.findByIdWithAssociations(appointmentId)
                 .orElseThrow(() -> new ResponseStatusException(HttpStatus.NOT_FOUND, "Appointment not found"));
 
-        if (!appointment.getCustomer().getId().equals(account.getCustomer().getId())) {
+        if (!appointment.getCustomer().getId().equals(account.getId())) {
             throw new ResponseStatusException(HttpStatus.FORBIDDEN, "You can only update your own appointments");
         }
         if (appointment.getStatus() != AppointmentStatus.REQUESTED) {
@@ -211,10 +202,10 @@ public class CustomerAuthService {
 
     @Transactional
     public void cancelCurrentCustomerAppointment(Long appointmentId) {
-        CustomerAccount account = getCurrentAccount();
+        User account = getCurrentAccount();
         Appointment appointment = appointmentRepository.findByIdWithAssociations(appointmentId)
                 .orElseThrow(() -> new ResponseStatusException(HttpStatus.NOT_FOUND, "Appointment not found"));
-        if (!appointment.getCustomer().getId().equals(account.getCustomer().getId())) {
+        if (!appointment.getCustomer().getId().equals(account.getId())) {
             throw new ResponseStatusException(HttpStatus.FORBIDDEN, "You can only cancel your own appointments");
         }
         appointment.setStatus(AppointmentStatus.CANCELLED);
@@ -222,7 +213,7 @@ public class CustomerAuthService {
         appointmentSlotInventoryService.releaseSlots(saved.getId());
     }
 
-    private CustomerAccount getCurrentAccount() {
+    private User getCurrentAccount() {
         Authentication authentication = SecurityContextHolder.getContext().getAuthentication();
         if (authentication == null || authentication.getName() == null) {
             throw new ResponseStatusException(HttpStatus.UNAUTHORIZED, "Authentication required");
@@ -235,7 +226,7 @@ public class CustomerAuthService {
             throw new ResponseStatusException(HttpStatus.UNAUTHORIZED, "Invalid authentication principal");
         }
 
-        return customerAccountRepository.findByIdWithCustomer(accountId)
+        return userRepository.findByIdWithRole(accountId)
                 .orElseThrow(() -> new ResponseStatusException(HttpStatus.UNAUTHORIZED, "Customer account not found"));
     }
 
@@ -243,9 +234,8 @@ public class CustomerAuthService {
         return email == null ? "" : email.trim().toLowerCase();
     }
 
-    private CustomerProfileDto toCustomerProfile(CustomerAccount account) {
-        Customer customer = account.getCustomer();
-        String fullName = customer.getFullName() == null ? "" : customer.getFullName().trim();
+    private CustomerProfileDto toCustomerProfile(User account) {
+        String fullName = account.getFullName() == null ? "" : account.getFullName().trim();
         String firstName = fullName;
         String lastName = "";
         int firstSpace = fullName.indexOf(' ');
@@ -257,11 +247,11 @@ public class CustomerAuthService {
         String role = account.getRole() == null ? "CUSTOMER" : normalizeRoleName(account.getRole().getName());
 
         return new CustomerProfileDto(
-                customer.getId(),
+                account.getId(),
                 firstName,
                 lastName,
                 fullName,
-                customer.getEmail(),
+                account.getEmailNormalized(),
                 role
         );
     }

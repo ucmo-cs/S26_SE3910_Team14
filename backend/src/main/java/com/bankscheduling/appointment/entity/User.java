@@ -1,6 +1,8 @@
 package com.bankscheduling.appointment.entity;
 
+import com.bankscheduling.appointment.entity.converter.PiiEncryptionConverter;
 import jakarta.persistence.Column;
+import jakarta.persistence.Convert;
 import jakarta.persistence.Entity;
 import jakarta.persistence.FetchType;
 import jakarta.persistence.JoinColumn;
@@ -9,35 +11,40 @@ import jakarta.persistence.Table;
 
 import java.time.Instant;
 
-/**
- * Maps to {@code employees} (V1__init_schema.sql).
- */
 @Entity
-@Table(name = "employees")
-public class Employee extends AuditableEntity {
+@Table(name = "users")
+public class User extends AuditableEntity {
 
-    @ManyToOne(fetch = FetchType.LAZY, optional = false)
-    @JoinColumn(name = "branch_id", nullable = false)
+    @ManyToOne(fetch = FetchType.LAZY)
+    @JoinColumn(name = "branch_id")
     private Branch branch;
 
     @ManyToOne(fetch = FetchType.LAZY, optional = false)
     @JoinColumn(name = "role_id", nullable = false)
     private Role role;
 
-    @Column(name = "username", nullable = false, unique = true, length = 128)
+    @Column(name = "username", unique = true, length = 128)
     private String username;
+
+    @Column(name = "email_normalized", nullable = false, unique = true, length = 255)
+    private String emailNormalized;
 
     @Column(name = "password_hash", nullable = false, length = 255)
     private String passwordHash;
 
-    @Column(name = "first_name", nullable = false, length = 120)
+    @Column(name = "first_name", length = 120)
     private String firstName;
 
-    @Column(name = "last_name", nullable = false, length = 120)
+    @Column(name = "last_name", length = 120)
     private String lastName;
 
-    @Column(name = "work_email", nullable = false, length = 255)
-    private String workEmail;
+    @Convert(converter = PiiEncryptionConverter.class)
+    @Column(name = "full_name_cipher", columnDefinition = "TEXT")
+    private String fullName;
+
+    @Convert(converter = PiiEncryptionConverter.class)
+    @Column(name = "phone_cipher", columnDefinition = "TEXT")
+    private String phone;
 
     @Column(name = "active", nullable = false)
     private boolean active = true;
@@ -75,6 +82,14 @@ public class Employee extends AuditableEntity {
         this.username = username;
     }
 
+    public String getEmailNormalized() {
+        return emailNormalized;
+    }
+
+    public void setEmailNormalized(String emailNormalized) {
+        this.emailNormalized = emailNormalized;
+    }
+
     public String getPasswordHash() {
         return passwordHash;
     }
@@ -99,12 +114,20 @@ public class Employee extends AuditableEntity {
         this.lastName = lastName;
     }
 
-    public String getWorkEmail() {
-        return workEmail;
+    public String getFullName() {
+        return fullName;
     }
 
-    public void setWorkEmail(String workEmail) {
-        this.workEmail = workEmail;
+    public void setFullName(String fullName) {
+        this.fullName = fullName;
+    }
+
+    public String getPhone() {
+        return phone;
+    }
+
+    public void setPhone(String phone) {
+        this.phone = phone;
     }
 
     public boolean isActive() {

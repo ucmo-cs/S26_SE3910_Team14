@@ -41,8 +41,8 @@ public class AuditLog {
     private Map<String, Object> newState;
 
     @ManyToOne(fetch = FetchType.LAZY)
-    @JoinColumn(name = "performed_by_employee_id")
-    private Employee performedBy;
+    @JoinColumn(name = "performed_by_user_id")
+    private User performedBy;
 
     @Column(name = "ip_address", length = 64)
     private String ipAddress;
@@ -121,11 +121,11 @@ public class AuditLog {
         this.newState = newState;
     }
 
-    public Employee getPerformedBy() {
+    public User getPerformedBy() {
         return performedBy;
     }
 
-    public void setPerformedBy(Employee performedBy) {
+    public void setPerformedBy(User performedBy) {
         this.performedBy = performedBy;
     }
 

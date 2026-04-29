@@ -1,11 +1,8 @@
 package com.bankscheduling.appointment.service;
 
 import com.bankscheduling.appointment.dto.auth.AuthProfileResponse;
-import com.bankscheduling.appointment.entity.Customer;
-import com.bankscheduling.appointment.entity.CustomerAccount;
-import com.bankscheduling.appointment.entity.Employee;
-import com.bankscheduling.appointment.repository.CustomerAccountRepository;
-import com.bankscheduling.appointment.repository.EmployeeRepository;
+import com.bankscheduling.appointment.entity.User;
+import com.bankscheduling.appointment.repository.UserRepository;
 import org.springframework.http.HttpStatus;
 import org.springframework.security.core.Authentication;
 import org.springframework.security.core.context.SecurityContextHolder;
@@ -15,15 +12,12 @@ import org.springframework.web.server.ResponseStatusException;
 
 @Service
 public class AuthProfileService {
-    private final CustomerAccountRepository customerAccountRepository;
-    private final EmployeeRepository employeeRepository;
+    private final UserRepository userRepository;
 
     public AuthProfileService(
-            CustomerAccountRepository customerAccountRepository,
-            EmployeeRepository employeeRepository
+            UserRepository userRepository
     ) {
-        this.customerAccountRepository = customerAccountRepository;
-        this.employeeRepository = employeeRepository;
+        this.userRepository = userRepository;
     }
 
     @Transactional(readOnly = true)
@@ -39,35 +33,19 @@ public class AuthProfileService {
             throw new ResponseStatusException(HttpStatus.UNAUTHORIZED, "Invalid authentication principal");
         }
 
-        return customerAccountRepository.findByIdWithCustomer(principalId)
-                .map(this::toCustomerProfile)
-                .orElseGet(() -> employeeRepository.findByIdWithBranchAndRole(principalId)
-                        .map(this::toEmployeeProfile)
-                        .orElseThrow(() -> new ResponseStatusException(HttpStatus.UNAUTHORIZED, "Authenticated user not found")));
-    }
-
-    private AuthProfileResponse toCustomerProfile(CustomerAccount account) {
-        Customer customer = account.getCustomer();
-        String[] split = splitName(customer.getFullName());
+        User user = userRepository.findByIdWithRole(principalId)
+                .orElseThrow(() -> new ResponseStatusException(HttpStatus.UNAUTHORIZED, "Authenticated user not found"));
+        String fullName = user.getFullName() == null || user.getFullName().isBlank()
+                ? ((user.getFirstName() == null ? "" : user.getFirstName()) + " " + (user.getLastName() == null ? "" : user.getLastName())).trim()
+                : user.getFullName();
+        String[] split = splitName(fullName);
         return new AuthProfileResponse(
-                customer.getId(),
+                user.getId(),
                 split[0],
                 split[1],
-                customer.getFullName(),
-                customer.getEmail(),
-                normalizeRole(account.getRole().getName())
-        );
-    }
-
-    private AuthProfileResponse toEmployeeProfile(Employee employee) {
-        String fullName = employee.getFirstName() + " " + employee.getLastName();
-        return new AuthProfileResponse(
-                employee.getId(),
-                employee.getFirstName(),
-                employee.getLastName(),
                 fullName,
-                employee.getWorkEmail(),
-                normalizeRole(employee.getRole().getName())
+                user.getEmailNormalized(),
+                normalizeRole(user.getRole().getName())
         );
     }
 

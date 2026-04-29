@@ -3,11 +3,8 @@ package com.bankscheduling.appointment.audit;
 import com.bankscheduling.appointment.entity.AuditAction;
 import com.bankscheduling.appointment.entity.AuditLog;
 import com.bankscheduling.appointment.entity.AuditableEntity;
-import com.bankscheduling.appointment.entity.CustomerAccount;
-import com.bankscheduling.appointment.entity.Employee;
 import com.bankscheduling.appointment.repository.AuditLogRepository;
-import com.bankscheduling.appointment.repository.CustomerAccountRepository;
-import com.bankscheduling.appointment.repository.EmployeeRepository;
+import com.bankscheduling.appointment.repository.UserRepository;
 import jakarta.servlet.http.HttpServletRequest;
 import org.springframework.security.core.Authentication;
 import org.springframework.security.core.GrantedAuthority;
@@ -28,17 +25,14 @@ import java.util.stream.Collectors;
 public class AuditLogWriter {
 
     private final AuditLogRepository auditLogRepository;
-    private final EmployeeRepository employeeRepository;
-    private final CustomerAccountRepository customerAccountRepository;
+    private final UserRepository userRepository;
 
     public AuditLogWriter(
             AuditLogRepository auditLogRepository,
-            EmployeeRepository employeeRepository,
-            CustomerAccountRepository customerAccountRepository
+            UserRepository userRepository
     ) {
         this.auditLogRepository = auditLogRepository;
-        this.employeeRepository = employeeRepository;
-        this.customerAccountRepository = customerAccountRepository;
+        this.userRepository = userRepository;
     }
 
     /**
@@ -74,20 +68,20 @@ public class AuditLogWriter {
             return;
         }
 
-        Long employeeId = parsePrincipalAsEmployeeId(authentication.getPrincipal());
-        if (employeeId == null) {
+        Long userId = parsePrincipalAsEmployeeId(authentication.getPrincipal());
+        if (userId == null) {
             row.setActorType("SYSTEM");
             return;
         }
 
-        Optional<Employee> actor = employeeRepository.findById(employeeId);
+        var actor = userRepository.findByIdWithRole(userId);
         if (actor.isEmpty()) {
-            populateCustomerActorMetadata(row, employeeId, authentication);
+            populateCustomerActorMetadata(row, userId, authentication);
             return;
         }
 
-        row.setActorType("EMPLOYEE");
-        row.setActorEmployeeId(employeeId);
+        row.setActorType("USER");
+        row.setActorEmployeeId(userId);
         row.setPerformedBy(actor.orElse(null));
         actor.ifPresent(employee -> hydrateActor(row, employee, authentication));
         if (row.getActorRole() == null) {
@@ -98,18 +92,6 @@ public class AuditLogWriter {
     }
 
     private void populateCustomerActorMetadata(AuditLog row, Long principalId, Authentication authentication) {
-        Optional<CustomerAccount> customerActor = customerAccountRepository.findByIdWithCustomer(principalId);
-        if (customerActor.isPresent()) {
-            CustomerAccount account = customerActor.get();
-            row.setActorType("CUSTOMER");
-            row.setActorUsername(account.getEmailNormalized());
-            row.setActorEmail(account.getEmailNormalized());
-            if (account.getRole() != null && account.getRole().getName() != null) {
-                row.setActorRole(account.getRole().getName());
-                return;
-            }
-        }
-
         row.setActorType("AUTHENTICATED");
         row.setActorUsername(String.valueOf(authentication.getPrincipal()));
         row.setActorRole(authentication.getAuthorities().stream()
@@ -117,9 +99,9 @@ public class AuditLogWriter {
                 .collect(Collectors.joining(",")));
     }
 
-    private void hydrateActor(AuditLog row, Employee employee, Authentication authentication) {
+    private void hydrateActor(AuditLog row, com.bankscheduling.appointment.entity.User employee, Authentication authentication) {
         row.setActorUsername(employee.getUsername());
-        row.setActorEmail(employee.getWorkEmail());
+        row.setActorEmail(employee.getEmailNormalized());
         if (employee.getRole() != null && employee.getRole().getName() != null) {
             row.setActorRole(employee.getRole().getName());
             return;

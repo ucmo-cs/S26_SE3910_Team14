@@ -2,11 +2,10 @@ package com.bankscheduling.appointment.service;
 
 import com.bankscheduling.appointment.dto.appointment.AppointmentResponseDto;
 import com.bankscheduling.appointment.entity.Appointment;
-import com.bankscheduling.appointment.entity.Customer;
-import com.bankscheduling.appointment.entity.Employee;
 import com.bankscheduling.appointment.entity.ServiceType;
+import com.bankscheduling.appointment.entity.User;
 import com.bankscheduling.appointment.repository.AppointmentRepository;
-import com.bankscheduling.appointment.repository.EmployeeRepository;
+import com.bankscheduling.appointment.repository.UserRepository;
 import com.bankscheduling.appointment.security.SchedulingAuthorities;
 import org.springframework.security.access.AccessDeniedException;
 import org.springframework.security.authentication.AnonymousAuthenticationToken;
@@ -21,11 +20,11 @@ import java.util.List;
 public class AppointmentService {
 
     private final AppointmentRepository appointmentRepository;
-    private final EmployeeRepository employeeRepository;
+    private final UserRepository userRepository;
 
-    public AppointmentService(AppointmentRepository appointmentRepository, EmployeeRepository employeeRepository) {
+    public AppointmentService(AppointmentRepository appointmentRepository, UserRepository userRepository) {
         this.appointmentRepository = appointmentRepository;
-        this.employeeRepository = employeeRepository;
+        this.userRepository = userRepository;
     }
 
     /**
@@ -41,14 +40,14 @@ public class AppointmentService {
             throw new AccessDeniedException("Authentication required");
         }
 
-        Long employeeId;
+        Long userId;
         try {
-            employeeId = Long.parseLong(authentication.getName());
+            userId = Long.parseLong(authentication.getName());
         } catch (NumberFormatException ex) {
             throw new AccessDeniedException("Invalid security principal");
         }
 
-        Employee current = employeeRepository.findByIdWithBranchAndRole(employeeId)
+        User current = userRepository.findByIdWithBranchAndRole(userId)
                 .orElseThrow(() -> new AccessDeniedException("Employee not found"));
 
         String roleName = current.getRole().getName();
@@ -63,8 +62,8 @@ public class AppointmentService {
     }
 
     private AppointmentResponseDto toDto(Appointment a) {
-        Customer c = a.getCustomer();
-        Employee e = a.getEmployee();
+        User c = a.getCustomer();
+        User e = a.getEmployee();
         ServiceType st = a.getServiceType();
         return new AppointmentResponseDto(
                 a.getId(),
@@ -72,10 +71,10 @@ public class AppointmentService {
                 new AppointmentResponseDto.CustomerSummary(
                         c.getId(),
                         c.getFullName(),
-                        c.getEmail(),
+                        c.getEmailNormalized(),
                         c.getPhone()
                 ),
-                new AppointmentResponseDto.EmployeeSummary(e.getId(), e.getFirstName(), e.getLastName()),
+                new AppointmentResponseDto.EmployeeSummary(e.getId(), emptyIfNull(e.getFirstName()), emptyIfNull(e.getLastName())),
                 new AppointmentResponseDto.ServiceTypeSummary(st.getId(), st.getCode(), st.getDisplayName()),
                 a.getScheduledStart(),
                 a.getScheduledEnd(),
@@ -83,5 +82,9 @@ public class AppointmentService {
                 a.getNotes(),
                 a.getOptimisticLockVersion()
         );
+    }
+
+    private static String emptyIfNull(String value) {
+        return value == null ? "" : value;
     }
 }

@@ -40,7 +40,7 @@ public class SmtpAppointmentEmailService implements AppointmentEmailService {
 
         SimpleMailMessage message = new SimpleMailMessage();
         message.setFrom(fromAddress);
-        message.setTo(customer.getEmail());
+        message.setTo(customer.getEmailNormalized());
         message.setSubject("Commerce Bank | Appointment Confirmation #" + appointment.getId());
         message.setText("""
                 Dear %s,

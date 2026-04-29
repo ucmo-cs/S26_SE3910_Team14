@@ -8,11 +8,11 @@ import com.bankscheduling.appointment.entity.Appointment;
 import com.bankscheduling.appointment.entity.AppointmentStatus;
 import com.bankscheduling.appointment.entity.AuditLog;
 import com.bankscheduling.appointment.entity.BranchBusinessHours;
-import com.bankscheduling.appointment.entity.CustomerAccount;
+import com.bankscheduling.appointment.entity.User;
 import com.bankscheduling.appointment.repository.AppointmentRepository;
 import com.bankscheduling.appointment.repository.AuditLogRepository;
 import com.bankscheduling.appointment.repository.BranchBusinessHoursRepository;
-import com.bankscheduling.appointment.repository.CustomerAccountRepository;
+import com.bankscheduling.appointment.repository.UserRepository;
 import org.springframework.dao.DataIntegrityViolationException;
 import org.springframework.http.HttpStatus;
 import org.springframework.security.core.Authentication;
@@ -31,20 +31,20 @@ import java.util.List;
 public class DashboardDataService {
     private final AppointmentRepository appointmentRepository;
     private final AuditLogRepository auditLogRepository;
-    private final CustomerAccountRepository customerAccountRepository;
+    private final UserRepository userRepository;
     private final BranchBusinessHoursRepository branchBusinessHoursRepository;
     private final AppointmentSlotInventoryService appointmentSlotInventoryService;
 
     public DashboardDataService(
             AppointmentRepository appointmentRepository,
             AuditLogRepository auditLogRepository,
-            CustomerAccountRepository customerAccountRepository,
+            UserRepository userRepository,
             BranchBusinessHoursRepository branchBusinessHoursRepository,
             AppointmentSlotInventoryService appointmentSlotInventoryService
     ) {
         this.appointmentRepository = appointmentRepository;
         this.auditLogRepository = auditLogRepository;
-        this.customerAccountRepository = customerAccountRepository;
+        this.userRepository = userRepository;
         this.branchBusinessHoursRepository = branchBusinessHoursRepository;
         this.appointmentSlotInventoryService = appointmentSlotInventoryService;
     }
@@ -83,11 +83,11 @@ public class DashboardDataService {
     @Transactional(readOnly = true)
     public List<DashboardUserDto> getUsers() {
         requireAnyRole("ROLE_EMPLOYEE", "ROLE_ADMIN");
-        return customerAccountRepository.findAllWithCustomerAndRole().stream()
+        return userRepository.findAllWithRole().stream()
                 .map(account -> new DashboardUserDto(
                         account.getId(),
-                        account.getCustomer().getFullName(),
-                        account.getCustomer().getEmail(),
+                        account.getFullName(),
+                        account.getEmailNormalized(),
                         normalizeRole(account.getRole().getName()),
                         !account.isActive()
                 ))
@@ -97,10 +97,10 @@ public class DashboardDataService {
     @Transactional
     public void setUserLock(Long accountId, boolean locked) {
         requireAnyRole("ROLE_ADMIN");
-        CustomerAccount account = customerAccountRepository.findById(accountId)
+        User account = userRepository.findById(accountId)
                 .orElseThrow(() -> new ResponseStatusException(HttpStatus.NOT_FOUND, "User account not found"));
         account.setActive(!locked);
-        customerAccountRepository.save(account);
+        userRepository.save(account);
     }
 
     @Transactional
@@ -233,7 +233,7 @@ public class DashboardDataService {
             return username + " (" + email + ", " + role + ", emp#" + item.getActorEmployeeId() + ")";
         }
         if (item.getPerformedBy() != null) {
-            return item.getPerformedBy().getWorkEmail();
+            return item.getPerformedBy().getEmailNormalized();
         }
         return "SYSTEM";
     }
