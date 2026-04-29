@@ -30,7 +30,7 @@ function App() {
 
   return (
     <Routes>
-      <Route path="/" element={<Navigate to="/login" replace />} />
+      <Route path="/" element={<Navigate to="/book" replace />} />
       <Route path="/login" element={<LoginPage />} />
       <Route path="/register" element={<RegisterPage />} />
       <Route path="/unauthorized" element={<UnauthorizedPage />} />
@@ -60,15 +60,9 @@ function App() {
       />
       <Route
         path="/book"
-        element={
-          <RequireAuth>
-            <RoleProtectedRoute allowedRoles={['CUSTOMER']}>
-              <BookingPage />
-            </RoleProtectedRoute>
-          </RequireAuth>
-        }
+        element={<BookingPage />}
       />
-      <Route path="*" element={<Navigate to="/login" replace />} />
+      <Route path="*" element={<Navigate to="/book" replace />} />
     </Routes>
   );
 }
