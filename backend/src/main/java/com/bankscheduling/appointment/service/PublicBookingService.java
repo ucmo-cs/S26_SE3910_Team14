@@ -10,11 +10,13 @@ import com.bankscheduling.appointment.entity.AppointmentStatus;
 import com.bankscheduling.appointment.entity.AppointmentSlotInventory;
 import com.bankscheduling.appointment.entity.Branch;
 import com.bankscheduling.appointment.entity.BranchBusinessHours;
+import com.bankscheduling.appointment.entity.Guest;
 import com.bankscheduling.appointment.entity.ServiceType;
 import com.bankscheduling.appointment.entity.User;
 import com.bankscheduling.appointment.repository.AppointmentRepository;
 import com.bankscheduling.appointment.repository.BranchBusinessHoursRepository;
 import com.bankscheduling.appointment.repository.BranchRepository;
+import com.bankscheduling.appointment.repository.GuestRepository;
 import com.bankscheduling.appointment.repository.ServiceTypeRepository;
 import com.bankscheduling.appointment.repository.UserRepository;
 import org.springframework.dao.DataIntegrityViolationException;
@@ -50,6 +52,7 @@ public class PublicBookingService {
     private final BranchRepository branchRepository;
     private final AppointmentRepository appointmentRepository;
     private final UserRepository userRepository;
+    private final GuestRepository guestRepository;
     private final BranchBusinessHoursRepository branchBusinessHoursRepository;
     private final AppointmentEmailService appointmentEmailService;
     private final AppointmentSlotInventoryService appointmentSlotInventoryService;
@@ -59,6 +62,7 @@ public class PublicBookingService {
             BranchRepository branchRepository,
             AppointmentRepository appointmentRepository,
             UserRepository userRepository,
+            GuestRepository guestRepository,
             BranchBusinessHoursRepository branchBusinessHoursRepository,
             AppointmentEmailService appointmentEmailService,
             AppointmentSlotInventoryService appointmentSlotInventoryService
@@ -67,6 +71,7 @@ public class PublicBookingService {
         this.branchRepository = branchRepository;
         this.appointmentRepository = appointmentRepository;
         this.userRepository = userRepository;
+        this.guestRepository = guestRepository;
         this.branchBusinessHoursRepository = branchBusinessHoursRepository;
         this.appointmentEmailService = appointmentEmailService;
         this.appointmentSlotInventoryService = appointmentSlotInventoryService;
@@ -166,8 +171,9 @@ public class PublicBookingService {
                 .findFirst()
                 .orElseThrow(() -> new ResponseStatusException(HttpStatus.CONFLICT, "No specialists are currently available for this service"));
 
-        BookingContact bookingContact = resolveBookingContact(request);
-        User customer = resolveCustomerForBooking(branch, bookingContact);
+        Optional<Long> accountId = getAuthenticatedCustomerId();
+        BookingContact bookingContact = resolveBookingContact(request, accountId);
+        User customer = resolveCustomerForBooking(branch, accountId);
 
         Appointment appointment = new Appointment();
         appointment.setBranch(branch);
@@ -183,6 +189,9 @@ public class PublicBookingService {
             saved = appointmentRepository.save(appointment);
         } catch (DataIntegrityViolationException ex) {
             throw new ResponseStatusException(HttpStatus.CONFLICT, "Selected timeslot is no longer available");
+        }
+        if (accountId.isEmpty()) {
+            createGuestContact(saved, bookingContact);
         }
         appointmentSlotInventoryService.reserveSlots(
                 saved,
@@ -201,9 +210,7 @@ public class PublicBookingService {
         return new BookingResponseDto(saved.getId(), "Appointment booked successfully");
     }
 
-    private User resolveCustomerForBooking(Branch branch, BookingContact bookingContact) {
-        Optional<Long> accountId = getAuthenticatedCustomerId();
-
+    private User resolveCustomerForBooking(Branch branch, Optional<Long> accountId) {
         if (accountId.isPresent()) {
             User customer = userRepository.findByIdWithRole(accountId.get())
                     .orElseThrow(() -> new ResponseStatusException(HttpStatus.UNAUTHORIZED, "Customer account not found"));
@@ -228,8 +235,7 @@ public class PublicBookingService {
         return userRepository.save(fallbackCustomer);
     }
 
-    private BookingContact resolveBookingContact(BookingRequestDto request) {
-        Optional<Long> accountId = getAuthenticatedCustomerId();
+    private BookingContact resolveBookingContact(BookingRequestDto request, Optional<Long> accountId) {
         if (accountId.isPresent()) {
             User customer = userRepository.findByIdWithRole(accountId.get())
                     .orElseThrow(() -> new ResponseStatusException(HttpStatus.UNAUTHORIZED, "Customer account not found"));
@@ -253,6 +259,15 @@ public class PublicBookingService {
                 request.email().trim().toLowerCase(),
                 fullName
         );
+    }
+
+    private void createGuestContact(Appointment appointment, BookingContact bookingContact) {
+        Guest guest = new Guest();
+        guest.setAppointment(appointment);
+        guest.setFirstName(bookingContact.firstName());
+        guest.setLastName(bookingContact.lastName());
+        guest.setEmail(bookingContact.email());
+        guestRepository.save(guest);
     }
 
     private record BookingContact(

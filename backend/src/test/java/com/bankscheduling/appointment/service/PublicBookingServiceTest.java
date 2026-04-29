@@ -10,6 +10,7 @@ import com.bankscheduling.appointment.entity.User;
 import com.bankscheduling.appointment.repository.AppointmentRepository;
 import com.bankscheduling.appointment.repository.BranchBusinessHoursRepository;
 import com.bankscheduling.appointment.repository.BranchRepository;
+import com.bankscheduling.appointment.repository.GuestRepository;
 import com.bankscheduling.appointment.repository.ServiceTypeRepository;
 import com.bankscheduling.appointment.repository.UserRepository;
 import org.junit.jupiter.api.BeforeEach;
@@ -42,6 +43,8 @@ class PublicBookingServiceTest {
     @Mock
     private UserRepository userRepository;
     @Mock
+    private GuestRepository guestRepository;
+    @Mock
     private BranchBusinessHoursRepository branchBusinessHoursRepository;
     @Mock
     private AppointmentEmailService appointmentEmailService;
@@ -57,6 +60,7 @@ class PublicBookingServiceTest {
                 branchRepository,
                 appointmentRepository,
                 userRepository,
+                guestRepository,
                 branchBusinessHoursRepository,
                 appointmentEmailService,
                 appointmentSlotInventoryService
