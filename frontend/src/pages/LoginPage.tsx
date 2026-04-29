@@ -98,6 +98,12 @@ export default function LoginPage() {
             Create an account
           </Link>
         </p>
+        <p className="mt-2 text-sm text-slate-600">
+          Prefer not to sign up?{' '}
+          <Link to="/book" className="font-medium text-blue-900 hover:underline">
+            Continue as a guest
+          </Link>
+        </p>
       </div>
     </main>
   );

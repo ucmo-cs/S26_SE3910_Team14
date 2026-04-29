@@ -2,11 +2,12 @@ package com.bankscheduling.appointment.service;
 
 import com.bankscheduling.appointment.dto.appointment.AppointmentResponseDto;
 import com.bankscheduling.appointment.entity.Appointment;
-import com.bankscheduling.appointment.entity.Customer;
-import com.bankscheduling.appointment.entity.Employee;
+import com.bankscheduling.appointment.entity.Guest;
 import com.bankscheduling.appointment.entity.ServiceType;
+import com.bankscheduling.appointment.entity.User;
 import com.bankscheduling.appointment.repository.AppointmentRepository;
-import com.bankscheduling.appointment.repository.EmployeeRepository;
+import com.bankscheduling.appointment.repository.GuestRepository;
+import com.bankscheduling.appointment.repository.UserRepository;
 import com.bankscheduling.appointment.security.SchedulingAuthorities;
 import org.springframework.security.access.AccessDeniedException;
 import org.springframework.security.authentication.AnonymousAuthenticationToken;
@@ -16,16 +17,26 @@ import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 
 import java.util.List;
+import java.util.Map;
+import java.util.function.Function;
+import java.util.stream.Collectors;
 
 @Service
 public class AppointmentService {
+    private static final long DEFAULT_PUBLIC_BOOKING_CUSTOMER_ID = 99L;
 
     private final AppointmentRepository appointmentRepository;
-    private final EmployeeRepository employeeRepository;
+    private final UserRepository userRepository;
+    private final GuestRepository guestRepository;
 
-    public AppointmentService(AppointmentRepository appointmentRepository, EmployeeRepository employeeRepository) {
+    public AppointmentService(
+            AppointmentRepository appointmentRepository,
+            UserRepository userRepository,
+            GuestRepository guestRepository
+    ) {
         this.appointmentRepository = appointmentRepository;
-        this.employeeRepository = employeeRepository;
+        this.userRepository = userRepository;
+        this.guestRepository = guestRepository;
     }
 
     /**
@@ -41,14 +52,14 @@ public class AppointmentService {
             throw new AccessDeniedException("Authentication required");
         }
 
-        Long employeeId;
+        Long userId;
         try {
-            employeeId = Long.parseLong(authentication.getName());
+            userId = Long.parseLong(authentication.getName());
         } catch (NumberFormatException ex) {
             throw new AccessDeniedException("Invalid security principal");
         }
 
-        Employee current = employeeRepository.findByIdWithBranchAndRole(employeeId)
+        User current = userRepository.findByIdWithBranchAndRole(userId)
                 .orElseThrow(() -> new AccessDeniedException("Employee not found"));
 
         String roleName = current.getRole().getName();
@@ -57,25 +68,32 @@ public class AppointmentService {
             throw new AccessDeniedException("Not permitted to view appointments for this branch");
         }
 
-        return appointmentRepository.findAllByBranchIdWithAssociationsOrdered(branchId).stream()
-                .map(this::toDto)
+        List<Appointment> appointments = appointmentRepository.findAllByBranchIdWithAssociationsOrdered(branchId);
+        Map<Long, Guest> guestContacts = loadGuestContacts(appointments);
+        return appointments.stream()
+                .map(a -> toDto(a, guestContacts.get(a.getId())))
                 .toList();
     }
 
-    private AppointmentResponseDto toDto(Appointment a) {
-        Customer c = a.getCustomer();
-        Employee e = a.getEmployee();
+    private AppointmentResponseDto toDto(Appointment a, Guest guest) {
+        User c = a.getCustomer();
+        User e = a.getEmployee();
         ServiceType st = a.getServiceType();
+        boolean guestAppointment = c.getId() != null && c.getId() == DEFAULT_PUBLIC_BOOKING_CUSTOMER_ID;
+        String customerFullName = guestAppointment && guest != null
+                ? (guest.getFirstName() + " " + guest.getLastName()).trim()
+                : c.getFullName();
+        String customerEmail = guestAppointment && guest != null ? guest.getEmail() : c.getEmailNormalized();
         return new AppointmentResponseDto(
                 a.getId(),
                 a.getBranch().getId(),
                 new AppointmentResponseDto.CustomerSummary(
                         c.getId(),
-                        c.getFullName(),
-                        c.getEmail(),
+                        customerFullName,
+                        customerEmail,
                         c.getPhone()
                 ),
-                new AppointmentResponseDto.EmployeeSummary(e.getId(), e.getFirstName(), e.getLastName()),
+                new AppointmentResponseDto.EmployeeSummary(e.getId(), emptyIfNull(e.getFirstName()), emptyIfNull(e.getLastName())),
                 new AppointmentResponseDto.ServiceTypeSummary(st.getId(), st.getCode(), st.getDisplayName()),
                 a.getScheduledStart(),
                 a.getScheduledEnd(),
@@ -83,5 +101,21 @@ public class AppointmentService {
                 a.getNotes(),
                 a.getOptimisticLockVersion()
         );
+    }
+
+    private static String emptyIfNull(String value) {
+        return value == null ? "" : value;
+    }
+
+    private Map<Long, Guest> loadGuestContacts(List<Appointment> appointments) {
+        List<Long> guestAppointmentIds = appointments.stream()
+                .filter(a -> a.getCustomer().getId() != null && a.getCustomer().getId() == DEFAULT_PUBLIC_BOOKING_CUSTOMER_ID)
+                .map(Appointment::getId)
+                .toList();
+        if (guestAppointmentIds.isEmpty()) {
+            return Map.of();
+        }
+        return guestRepository.findAllByAppointmentIdIn(guestAppointmentIds).stream()
+                .collect(Collectors.toMap(guest -> guest.getAppointment().getId(), Function.identity()));
     }
 }

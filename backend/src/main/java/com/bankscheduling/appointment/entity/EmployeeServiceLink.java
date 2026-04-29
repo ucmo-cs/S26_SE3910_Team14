@@ -18,7 +18,7 @@ public class EmployeeServiceLink {
     @ManyToOne(fetch = FetchType.LAZY, optional = false)
     @MapsId("employeeId")
     @JoinColumn(name = "employee_id")
-    private Employee employee;
+    private User employee;
 
     @ManyToOne(fetch = FetchType.LAZY, optional = false)
     @MapsId("serviceTypeId")
@@ -33,11 +33,11 @@ public class EmployeeServiceLink {
         this.id = id;
     }
 
-    public Employee getEmployee() {
+    public User getEmployee() {
         return employee;
     }
 
-    public void setEmployee(Employee employee) {
+    public void setEmployee(User employee) {
         this.employee = employee;
         if (id != null && employee != null && employee.getId() != null) {
             id.setEmployeeId(employee.getId());

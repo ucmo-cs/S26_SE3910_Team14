@@ -25,11 +25,11 @@ public class Appointment extends AuditableEntity {
 
     @ManyToOne(fetch = FetchType.LAZY, optional = false)
     @JoinColumn(name = "customer_id", nullable = false)
-    private Customer customer;
+    private User customer;
 
     @ManyToOne(fetch = FetchType.LAZY, optional = false)
     @JoinColumn(name = "employee_id", nullable = false)
-    private Employee employee;
+    private User employee;
 
     @ManyToOne(fetch = FetchType.LAZY, optional = false)
     @JoinColumn(name = "service_type_id", nullable = false)
@@ -60,19 +60,19 @@ public class Appointment extends AuditableEntity {
         this.branch = branch;
     }
 
-    public Customer getCustomer() {
+    public User getCustomer() {
         return customer;
     }
 
-    public void setCustomer(Customer customer) {
+    public void setCustomer(User customer) {
         this.customer = customer;
     }
 
-    public Employee getEmployee() {
+    public User getEmployee() {
         return employee;
     }
 
-    public void setEmployee(Employee employee) {
+    public void setEmployee(User employee) {
         this.employee = employee;
     }
 

@@ -8,11 +8,13 @@ import com.bankscheduling.appointment.entity.Appointment;
 import com.bankscheduling.appointment.entity.AppointmentStatus;
 import com.bankscheduling.appointment.entity.AuditLog;
 import com.bankscheduling.appointment.entity.BranchBusinessHours;
-import com.bankscheduling.appointment.entity.CustomerAccount;
+import com.bankscheduling.appointment.entity.Guest;
+import com.bankscheduling.appointment.entity.User;
 import com.bankscheduling.appointment.repository.AppointmentRepository;
 import com.bankscheduling.appointment.repository.AuditLogRepository;
 import com.bankscheduling.appointment.repository.BranchBusinessHoursRepository;
-import com.bankscheduling.appointment.repository.CustomerAccountRepository;
+import com.bankscheduling.appointment.repository.GuestRepository;
+import com.bankscheduling.appointment.repository.UserRepository;
 import org.springframework.dao.DataIntegrityViolationException;
 import org.springframework.http.HttpStatus;
 import org.springframework.security.core.Authentication;
@@ -26,25 +28,33 @@ import java.time.ZoneId;
 import java.time.ZonedDateTime;
 import java.time.Duration;
 import java.util.List;
+import java.util.Map;
+import java.util.function.Function;
+import java.util.stream.Collectors;
 
 @Service
 public class DashboardDataService {
+    private static final long DEFAULT_PUBLIC_BOOKING_CUSTOMER_ID = 99L;
+
     private final AppointmentRepository appointmentRepository;
     private final AuditLogRepository auditLogRepository;
-    private final CustomerAccountRepository customerAccountRepository;
+    private final UserRepository userRepository;
+    private final GuestRepository guestRepository;
     private final BranchBusinessHoursRepository branchBusinessHoursRepository;
     private final AppointmentSlotInventoryService appointmentSlotInventoryService;
 
     public DashboardDataService(
             AppointmentRepository appointmentRepository,
             AuditLogRepository auditLogRepository,
-            CustomerAccountRepository customerAccountRepository,
+            UserRepository userRepository,
+            GuestRepository guestRepository,
             BranchBusinessHoursRepository branchBusinessHoursRepository,
             AppointmentSlotInventoryService appointmentSlotInventoryService
     ) {
         this.appointmentRepository = appointmentRepository;
         this.auditLogRepository = auditLogRepository;
-        this.customerAccountRepository = customerAccountRepository;
+        this.userRepository = userRepository;
+        this.guestRepository = guestRepository;
         this.branchBusinessHoursRepository = branchBusinessHoursRepository;
         this.appointmentSlotInventoryService = appointmentSlotInventoryService;
     }
@@ -52,11 +62,13 @@ public class DashboardDataService {
     @Transactional(readOnly = true)
     public List<DashboardAppointmentDto> getRecentAppointments(int limit) {
         requireAnyRole("ROLE_EMPLOYEE", "ROLE_ADMIN");
-        return appointmentRepository.findAllWithAssociationsOrderByScheduledStartDesc().stream()
+        List<Appointment> appointments = appointmentRepository.findAllWithAssociationsOrderByScheduledStartDesc();
+        Map<Long, Guest> guestContacts = loadGuestContacts(appointments);
+        return appointments.stream()
                 .limit(Math.max(1, limit))
                 .map(a -> new DashboardAppointmentDto(
                         a.getId(),
-                        a.getCustomer().getFullName(),
+                        resolveDashboardCustomerName(a, guestContacts.get(a.getId())),
                         a.getServiceType().getDisplayName(),
                         a.getBranch().getDisplayName(),
                         a.getStatus().name(),
@@ -83,11 +95,11 @@ public class DashboardDataService {
     @Transactional(readOnly = true)
     public List<DashboardUserDto> getUsers() {
         requireAnyRole("ROLE_EMPLOYEE", "ROLE_ADMIN");
-        return customerAccountRepository.findAllWithCustomerAndRole().stream()
+        return userRepository.findAllWithRole().stream()
                 .map(account -> new DashboardUserDto(
                         account.getId(),
-                        account.getCustomer().getFullName(),
-                        account.getCustomer().getEmail(),
+                        account.getFullName(),
+                        account.getEmailNormalized(),
                         normalizeRole(account.getRole().getName()),
                         !account.isActive()
                 ))
@@ -97,10 +109,10 @@ public class DashboardDataService {
     @Transactional
     public void setUserLock(Long accountId, boolean locked) {
         requireAnyRole("ROLE_ADMIN");
-        CustomerAccount account = customerAccountRepository.findById(accountId)
+        User account = userRepository.findById(accountId)
                 .orElseThrow(() -> new ResponseStatusException(HttpStatus.NOT_FOUND, "User account not found"));
         account.setActive(!locked);
-        customerAccountRepository.save(account);
+        userRepository.save(account);
     }
 
     @Transactional
@@ -196,9 +208,10 @@ public class DashboardDataService {
         } else if (statusChanged && saved.getStatus() == AppointmentStatus.CANCELLED) {
             appointmentSlotInventoryService.releaseSlots(saved.getId());
         }
+        Guest guest = isGuestAppointment(saved) ? guestRepository.findByAppointmentId(saved.getId()).orElse(null) : null;
         return new DashboardAppointmentDto(
                 saved.getId(),
-                saved.getCustomer().getFullName(),
+                resolveDashboardCustomerName(saved, guest),
                 saved.getServiceType().getDisplayName(),
                 saved.getBranch().getDisplayName(),
                 saved.getStatus().name(),
@@ -233,7 +246,7 @@ public class DashboardDataService {
             return username + " (" + email + ", " + role + ", emp#" + item.getActorEmployeeId() + ")";
         }
         if (item.getPerformedBy() != null) {
-            return item.getPerformedBy().getWorkEmail();
+            return item.getPerformedBy().getEmailNormalized();
         }
         return "SYSTEM";
     }
@@ -328,6 +341,30 @@ public class DashboardDataService {
             }
         }
         throw new ResponseStatusException(HttpStatus.FORBIDDEN, "Insufficient permissions");
+    }
+
+    private Map<Long, Guest> loadGuestContacts(List<Appointment> appointments) {
+        List<Long> guestAppointmentIds = appointments.stream()
+                .filter(this::isGuestAppointment)
+                .map(Appointment::getId)
+                .toList();
+        if (guestAppointmentIds.isEmpty()) {
+            return Map.of();
+        }
+        return guestRepository.findAllByAppointmentIdIn(guestAppointmentIds).stream()
+                .collect(Collectors.toMap(guest -> guest.getAppointment().getId(), Function.identity()));
+    }
+
+    private boolean isGuestAppointment(Appointment appointment) {
+        return appointment.getCustomer().getId() != null
+                && appointment.getCustomer().getId() == DEFAULT_PUBLIC_BOOKING_CUSTOMER_ID;
+    }
+
+    private String resolveDashboardCustomerName(Appointment appointment, Guest guest) {
+        if (isGuestAppointment(appointment) && guest != null) {
+            return (guest.getFirstName() + " " + guest.getLastName()).trim();
+        }
+        return appointment.getCustomer().getFullName();
     }
 
     private void validateNineToFiveWindow(LocalTime start, LocalTime end) {

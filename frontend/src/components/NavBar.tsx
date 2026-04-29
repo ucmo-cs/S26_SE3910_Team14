@@ -5,7 +5,7 @@ import { useAuth } from '../context/AuthProvider';
 export default function NavBar() {
   const location = useLocation();
   const navigate = useNavigate();
-  const { logout, user, role } = useAuth();
+  const { logout, user, role, status } = useAuth();
   const [darkMode, setDarkMode] = useState(() => localStorage.getItem('uiTheme') === 'dark');
 
   useEffect(() => {
@@ -19,8 +19,10 @@ export default function NavBar() {
     }
   }, [darkMode]);
 
-  const navItems =
-    role === 'ADMIN'
+  const isAuthenticated = status === 'authenticated';
+  const navItems = !isAuthenticated
+    ? [{ to: '/book', label: 'New Appointment' }]
+    : role === 'ADMIN'
       ? [
           { to: '/admin', label: 'Admin Dashboard' },
           { to: '/dashboard', label: 'Home' },
@@ -79,30 +81,41 @@ export default function NavBar() {
             )}
             {darkMode}
           </button>
-          <span className="hidden rounded-full border border-slate-200 px-2 py-1 text-xs font-medium text-slate-700 md:inline">
-            {role}
-          </span>
-          <span className="hidden text-sm text-slate-600 md:inline">{user?.email}</span>
-          <button
-            type="button"
-            onClick={() => {
-              logout();
-              navigate('/login', { replace: true });
-            }}
-            className="icon-bounce-hover inline-flex items-center gap-2 rounded-md border border-slate-200 px-3 py-1.5 text-sm text-slate-700 hover:bg-slate-50"
-          >
-            <svg viewBox="0 0 24 24" className="h-4 w-4" aria-hidden="true">
-              <path
-                d="M10 4H6a2 2 0 0 0-2 2v12a2 2 0 0 0 2 2h4M14 16l4-4-4-4M8 12h10"
-                fill="none"
-                stroke="currentColor"
-                strokeWidth="1.7"
-                strokeLinecap="round"
-                strokeLinejoin="round"
-              />
-            </svg>
-            Sign Out
-          </button>
+          {isAuthenticated ? (
+            <>
+              <span className="hidden rounded-full border border-slate-200 px-2 py-1 text-xs font-medium text-slate-700 md:inline">
+                {role}
+              </span>
+              <span className="hidden text-sm text-slate-600 md:inline">{user?.email}</span>
+              <button
+                type="button"
+                onClick={() => {
+                  logout();
+                  navigate('/login', { replace: true });
+                }}
+                className="icon-bounce-hover inline-flex items-center gap-2 rounded-md border border-slate-200 px-3 py-1.5 text-sm text-slate-700 hover:bg-slate-50"
+              >
+                <svg viewBox="0 0 24 24" className="h-4 w-4" aria-hidden="true">
+                  <path
+                    d="M10 4H6a2 2 0 0 0-2 2v12a2 2 0 0 0 2 2h4M14 16l4-4-4-4M8 12h10"
+                    fill="none"
+                    stroke="currentColor"
+                    strokeWidth="1.7"
+                    strokeLinecap="round"
+                    strokeLinejoin="round"
+                  />
+                </svg>
+                Sign Out
+              </button>
+            </>
+          ) : (
+            <Link
+              to="/login"
+              className="inline-flex items-center gap-2 rounded-md border border-slate-200 px-3 py-1.5 text-sm text-slate-700 hover:bg-slate-50"
+            >
+              Sign In
+            </Link>
+          )}
         </div>
       </div>
     </header>

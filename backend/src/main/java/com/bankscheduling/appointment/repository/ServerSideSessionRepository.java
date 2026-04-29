@@ -13,9 +13,9 @@ public interface ServerSideSessionRepository extends JpaRepository<ServerSideSes
 
     @Query("""
             select s from ServerSideSession s
-            join fetch s.employee e
+            join fetch s.user e
             join fetch e.role
             where s.id = :id and s.revokedAt is null
             """)
-    Optional<ServerSideSession> findActiveByIdWithEmployee(@Param("id") Long id);
+    Optional<ServerSideSession> findActiveByIdWithUser(@Param("id") Long id);
 }

@@ -1,9 +1,9 @@
 package com.bankscheduling.appointment.service;
 
-import com.bankscheduling.appointment.entity.Employee;
+import com.bankscheduling.appointment.entity.User;
 import com.bankscheduling.appointment.entity.ServerSideSession;
-import com.bankscheduling.appointment.repository.EmployeeRepository;
 import com.bankscheduling.appointment.repository.ServerSideSessionRepository;
+import com.bankscheduling.appointment.repository.UserRepository;
 import com.bankscheduling.appointment.security.JwtCookieNames;
 import com.bankscheduling.appointment.security.JwtSecurityProperties;
 import com.bankscheduling.appointment.security.cookie.TokenCookieService;
@@ -31,7 +31,7 @@ import java.util.UUID;
 @Service
 public class AuthService {
 
-    private final EmployeeRepository employeeRepository;
+    private final UserRepository userRepository;
     private final ServerSideSessionRepository sessionRepository;
     private final JwtTokenProvider jwtTokenProvider;
     private final JwtSecurityProperties jwtSecurityProperties;
@@ -39,14 +39,14 @@ public class AuthService {
     private final TokenCookieService tokenCookieService;
 
     public AuthService(
-            EmployeeRepository employeeRepository,
+            UserRepository userRepository,
             ServerSideSessionRepository sessionRepository,
             JwtTokenProvider jwtTokenProvider,
             JwtSecurityProperties jwtSecurityProperties,
             PasswordEncoder passwordEncoder,
             TokenCookieService tokenCookieService
     ) {
-        this.employeeRepository = employeeRepository;
+        this.userRepository = userRepository;
         this.sessionRepository = sessionRepository;
         this.jwtTokenProvider = jwtTokenProvider;
         this.jwtSecurityProperties = jwtSecurityProperties;
@@ -60,19 +60,19 @@ public class AuthService {
      */
     @Transactional
     public LoginTokenPair login(String username, String password, HttpServletRequest request) {
-        Employee employee = employeeRepository.findByUsernameForAuth(username)
+        User user = userRepository.findByUsernameForAuth(username)
                 .orElseThrow(() -> new ResponseStatusException(HttpStatus.UNAUTHORIZED, "Invalid credentials"));
 
-        if (!employee.isActive() || employee.isAccountLocked()) {
+        if (!user.isActive() || user.isAccountLocked()) {
             throw new ResponseStatusException(HttpStatus.UNAUTHORIZED, "Invalid credentials");
         }
 
-        if (!passwordEncoder.matches(password, employee.getPasswordHash())) {
+        if (!passwordEncoder.matches(password, user.getPasswordHash())) {
             throw new ResponseStatusException(HttpStatus.UNAUTHORIZED, "Invalid credentials");
         }
 
         ServerSideSession session = new ServerSideSession();
-        session.setEmployee(employee);
+        session.setUser(user);
         session.setIpAddress(clientIp(request));
         session.setUserAgent(trimUserAgent(request.getHeader("User-Agent")));
         session.setExpiresAt(Instant.now().plusSeconds(jwtSecurityProperties.getRefreshTokenTtlSeconds()));
@@ -81,12 +81,12 @@ public class AuthService {
         session.setRefreshTokenHash(hash(UUID.randomUUID().toString()));
         sessionRepository.save(session);
 
-        String refreshPlain = jwtTokenProvider.createRefreshToken(employee.getId(), session.getId());
+        String refreshPlain = jwtTokenProvider.createRefreshToken(user.getId(), session.getId());
         session.setRefreshTokenHash(hash(refreshPlain));
         sessionRepository.save(session);
 
-        List<String> roles = roleClaimsFor(employee);
-        String accessPlain = jwtTokenProvider.createAccessToken(employee.getId(), roles);
+        List<String> roles = roleClaimsFor(user);
+        String accessPlain = jwtTokenProvider.createAccessToken(user.getId(), roles);
         return new LoginTokenPair(accessPlain, refreshPlain);
     }
 
@@ -111,7 +111,7 @@ public class AuthService {
         }
 
         long sessionId = jwtTokenProvider.extractSessionIdFromRefresh(claims);
-        ServerSideSession session = sessionRepository.findActiveByIdWithEmployee(sessionId)
+        ServerSideSession session = sessionRepository.findActiveByIdWithUser(sessionId)
                 .orElseThrow(() -> new ResponseStatusException(HttpStatus.UNAUTHORIZED, "Session not found or revoked"));
 
         if (!session.getRefreshTokenHash().equals(hash(refresh))) {
@@ -125,9 +125,9 @@ public class AuthService {
         session.setLastSeenAt(Instant.now());
         sessionRepository.save(session);
 
-        Employee employee = session.getEmployee();
-        List<String> roles = roleClaimsFor(employee);
-        return jwtTokenProvider.createAccessToken(employee.getId(), roles);
+        User user = session.getUser();
+        List<String> roles = roleClaimsFor(user);
+        return jwtTokenProvider.createAccessToken(user.getId(), roles);
     }
 
     /**
@@ -142,7 +142,7 @@ public class AuthService {
                     return;
                 }
                 long sessionId = jwtTokenProvider.extractSessionIdFromRefresh(claims);
-                sessionRepository.findActiveByIdWithEmployee(sessionId).ifPresent(session -> {
+                sessionRepository.findActiveByIdWithUser(sessionId).ifPresent(session -> {
                     if (session.getRefreshTokenHash().equals(hash(refresh))) {
                         session.setRevokedAt(Instant.now());
                         sessionRepository.save(session);
@@ -158,8 +158,8 @@ public class AuthService {
     public record LoginTokenPair(String accessToken, String refreshToken) {
     }
 
-    private static List<String> roleClaimsFor(Employee employee) {
-        String name = employee.getRole().getName();
+    private static List<String> roleClaimsFor(User user) {
+        String name = user.getRole().getName();
         if (name == null || name.isBlank()) {
             return List.of("ROLE_EMPLOYEE");
         }

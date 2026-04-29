@@ -5,15 +5,14 @@ import com.bankscheduling.appointment.dto.publicbooking.PublicTimeslotsDto;
 import com.bankscheduling.appointment.entity.AppointmentSlotInventory;
 import com.bankscheduling.appointment.entity.Branch;
 import com.bankscheduling.appointment.entity.BranchBusinessHours;
-import com.bankscheduling.appointment.entity.Employee;
 import com.bankscheduling.appointment.entity.ServiceType;
+import com.bankscheduling.appointment.entity.User;
 import com.bankscheduling.appointment.repository.AppointmentRepository;
 import com.bankscheduling.appointment.repository.BranchBusinessHoursRepository;
 import com.bankscheduling.appointment.repository.BranchRepository;
-import com.bankscheduling.appointment.repository.CustomerAccountRepository;
-import com.bankscheduling.appointment.repository.CustomerRepository;
-import com.bankscheduling.appointment.repository.EmployeeRepository;
+import com.bankscheduling.appointment.repository.GuestRepository;
 import com.bankscheduling.appointment.repository.ServiceTypeRepository;
+import com.bankscheduling.appointment.repository.UserRepository;
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Test;
 import org.junit.jupiter.api.extension.ExtendWith;
@@ -42,11 +41,9 @@ class PublicBookingServiceTest {
     @Mock
     private AppointmentRepository appointmentRepository;
     @Mock
-    private EmployeeRepository employeeRepository;
+    private UserRepository userRepository;
     @Mock
-    private CustomerRepository customerRepository;
-    @Mock
-    private CustomerAccountRepository customerAccountRepository;
+    private GuestRepository guestRepository;
     @Mock
     private BranchBusinessHoursRepository branchBusinessHoursRepository;
     @Mock
@@ -62,9 +59,8 @@ class PublicBookingServiceTest {
                 serviceTypeRepository,
                 branchRepository,
                 appointmentRepository,
-                employeeRepository,
-                customerRepository,
-                customerAccountRepository,
+                userRepository,
+                guestRepository,
                 branchBusinessHoursRepository,
                 appointmentEmailService,
                 appointmentSlotInventoryService
@@ -99,7 +95,7 @@ class PublicBookingServiceTest {
         mondayHours.setCloseTime(LocalTime.of(9, 0));
         mondayHours.setActive(true);
 
-        Employee employee = new Employee();
+        User employee = new User();
         employee.setId(50L);
 
         LocalDate date = LocalDate.of(2026, 4, 27);
@@ -107,7 +103,7 @@ class PublicBookingServiceTest {
         when(serviceTypeRepository.findByIdAndActiveTrue(10L)).thenReturn(Optional.of(topic));
         when(branchRepository.findActiveByServiceType(10L)).thenReturn(List.of(branch));
         when(branchBusinessHoursRepository.findByBranchIdAndDayOfWeekAndActiveTrue(1L, 1)).thenReturn(Optional.of(mondayHours));
-        when(employeeRepository.findActiveByBranchAndServiceType(1L, 10L)).thenReturn(List.of(employee));
+        when(userRepository.findActiveStaffByBranchAndServiceType(1L, 10L)).thenReturn(List.of(employee));
         when(appointmentSlotInventoryService.getDaySlots(1L, 10L, date)).thenReturn(List.of(
                 buildOpenSlot(branch, topic, date, LocalTime.of(9, 0)),
                 buildOpenSlot(branch, topic, date, LocalTime.of(9, 30))
