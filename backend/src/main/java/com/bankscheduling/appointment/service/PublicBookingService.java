@@ -166,7 +166,8 @@ public class PublicBookingService {
                 .findFirst()
                 .orElseThrow(() -> new ResponseStatusException(HttpStatus.CONFLICT, "No specialists are currently available for this service"));
 
-        User customer = resolveCustomerForBooking(branch, request);
+        BookingContact bookingContact = resolveBookingContact(request);
+        User customer = resolveCustomerForBooking(branch, bookingContact);
 
         Appointment appointment = new Appointment();
         appointment.setBranch(branch);
@@ -191,18 +192,22 @@ public class PublicBookingService {
                 request.startTime(),
                 request.durationMinutes()
         );
-        appointmentEmailService.sendBookingConfirmation(saved, branchZone);
+        appointmentEmailService.sendBookingConfirmation(
+                saved,
+                branchZone,
+                bookingContact.email(),
+                bookingContact.fullName()
+        );
         return new BookingResponseDto(saved.getId(), "Appointment booked successfully");
     }
 
-    private User resolveCustomerForBooking(Branch branch, BookingRequestDto request) {
+    private User resolveCustomerForBooking(Branch branch, BookingContact bookingContact) {
         Optional<Long> accountId = getAuthenticatedCustomerId();
 
         if (accountId.isPresent()) {
             User customer = userRepository.findByIdWithRole(accountId.get())
                     .orElseThrow(() -> new ResponseStatusException(HttpStatus.UNAUTHORIZED, "Customer account not found"));
             customer.setBranch(branch);
-            customer.setFullName(request.firstName().trim() + " " + request.lastName().trim());
             return userRepository.save(customer);
         }
 
@@ -217,7 +222,45 @@ public class PublicBookingService {
                     "Default public booking customer account is misconfigured"
             );
         }
-        return fallbackCustomer;
+        // Keep fallback identity stable in DB to avoid unique-email collisions with real accounts.
+        // Outbound email recipient/name are sourced from BookingContact in book().
+        fallbackCustomer.setBranch(branch);
+        return userRepository.save(fallbackCustomer);
+    }
+
+    private BookingContact resolveBookingContact(BookingRequestDto request) {
+        Optional<Long> accountId = getAuthenticatedCustomerId();
+        if (accountId.isPresent()) {
+            User customer = userRepository.findByIdWithRole(accountId.get())
+                    .orElseThrow(() -> new ResponseStatusException(HttpStatus.UNAUTHORIZED, "Customer account not found"));
+            String firstName = customer.getFirstName() == null ? "" : customer.getFirstName().trim();
+            String lastName = customer.getLastName() == null ? "" : customer.getLastName().trim();
+            String fullName = (firstName + " " + lastName).trim();
+            return new BookingContact(
+                    firstName,
+                    lastName,
+                    customer.getEmailNormalized(),
+                    fullName.isBlank() ? customer.getEmailNormalized() : fullName
+            );
+        }
+
+        String firstName = request.firstName().trim();
+        String lastName = request.lastName().trim();
+        String fullName = (firstName + " " + lastName).trim();
+        return new BookingContact(
+                firstName,
+                lastName,
+                request.email().trim().toLowerCase(),
+                fullName
+        );
+    }
+
+    private record BookingContact(
+            String firstName,
+            String lastName,
+            String email,
+            String fullName
+    ) {
     }
 
     private PublicBranchDto toBranchDto(Branch branch) {

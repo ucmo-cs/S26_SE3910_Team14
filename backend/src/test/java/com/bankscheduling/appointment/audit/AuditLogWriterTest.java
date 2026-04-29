@@ -4,8 +4,7 @@ import com.bankscheduling.appointment.entity.AuditAction;
 import com.bankscheduling.appointment.entity.AuditLog;
 import com.bankscheduling.appointment.entity.Branch;
 import com.bankscheduling.appointment.repository.AuditLogRepository;
-import com.bankscheduling.appointment.repository.CustomerAccountRepository;
-import com.bankscheduling.appointment.repository.EmployeeRepository;
+import com.bankscheduling.appointment.repository.UserRepository;
 import org.junit.jupiter.api.Test;
 import org.junit.jupiter.api.extension.ExtendWith;
 import org.mockito.ArgumentCaptor;
@@ -23,10 +22,7 @@ class AuditLogWriterTest {
     private AuditLogRepository auditLogRepository;
 
     @Mock
-    private EmployeeRepository employeeRepository;
-
-    @Mock
-    private CustomerAccountRepository customerAccountRepository;
+    private UserRepository userRepository;
 
     @InjectMocks
     private AuditLogWriter auditLogWriter;

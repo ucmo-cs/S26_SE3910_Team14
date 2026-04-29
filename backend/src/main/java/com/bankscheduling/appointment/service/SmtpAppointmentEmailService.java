@@ -32,15 +32,20 @@ public class SmtpAppointmentEmailService implements AppointmentEmailService {
     }
 
     @Override
-    public void sendBookingConfirmation(Appointment appointment, ZoneId branchZone) {
-        var customer = appointment.getCustomer();
+    public void sendBookingConfirmation(
+            Appointment appointment,
+            ZoneId branchZone,
+            String recipientEmail,
+            String recipientName
+    ) {
         var branch = appointment.getBranch();
         var topic = appointment.getServiceType();
         var start = appointment.getScheduledStart().atZone(branchZone);
+        String greetingName = recipientName == null || recipientName.isBlank() ? "Customer" : recipientName;
 
         SimpleMailMessage message = new SimpleMailMessage();
         message.setFrom(fromAddress);
-        message.setTo(customer.getEmailNormalized());
+        message.setTo(recipientEmail);
         message.setSubject("Commerce Bank | Appointment Confirmation #" + appointment.getId());
         message.setText("""
                 Dear %s,
@@ -64,7 +69,7 @@ public class SmtpAppointmentEmailService implements AppointmentEmailService {
                 Commerce Bank Client Services
                 This is an automated service message. Please do not reply.
                 """.formatted(
-                customer.getFullName(),
+                greetingName,
                 appointment.getId(),
                 topic.getDisplayName(),
                 branch.getDisplayName(),

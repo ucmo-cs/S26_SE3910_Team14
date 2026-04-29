@@ -14,7 +14,12 @@ public class NoOpAppointmentEmailService implements AppointmentEmailService {
     private static final Logger log = LoggerFactory.getLogger(NoOpAppointmentEmailService.class);
 
     @Override
-    public void sendBookingConfirmation(Appointment appointment, ZoneId branchZone) {
+    public void sendBookingConfirmation(
+            Appointment appointment,
+            ZoneId branchZone,
+            String recipientEmail,
+            String recipientName
+    ) {
         log.info("Email delivery not configured; skipping confirmation for appointment {}", appointment.getId());
     }
 }
