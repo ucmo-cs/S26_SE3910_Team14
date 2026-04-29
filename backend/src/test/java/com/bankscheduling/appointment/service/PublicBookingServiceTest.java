@@ -50,6 +50,8 @@ class PublicBookingServiceTest {
     private BranchBusinessHoursRepository branchBusinessHoursRepository;
     @Mock
     private AppointmentEmailService appointmentEmailService;
+    @Mock
+    private AppointmentSlotInventoryService appointmentSlotInventoryService;
 
     private PublicBookingService publicBookingService;
 
@@ -63,7 +65,8 @@ class PublicBookingServiceTest {
                 customerRepository,
                 customerAccountRepository,
                 branchBusinessHoursRepository,
-                appointmentEmailService
+                appointmentEmailService,
+                appointmentSlotInventoryService
         );
     }
 
@@ -106,7 +109,7 @@ class PublicBookingServiceTest {
         when(employeeRepository.findActiveByBranchAndServiceType(1L, 10L)).thenReturn(List.of(employee));
         when(appointmentRepository.findEmployeeOverlapsInWindow(eq(List.of(50L)), any(), any())).thenReturn(List.of());
 
-        PublicTimeslotsDto result = publicBookingService.getAvailableTimes(1L, 10L, date);
+        PublicTimeslotsDto result = publicBookingService.getAvailableTimes(1L, 10L, date, 30);
 
         assertEquals("America/Chicago", result.timeZone());
         assertEquals(2, result.slots().size());

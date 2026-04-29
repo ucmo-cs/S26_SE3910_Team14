@@ -41,11 +41,11 @@ public class SmtpAppointmentEmailService implements AppointmentEmailService {
         SimpleMailMessage message = new SimpleMailMessage();
         message.setFrom(fromAddress);
         message.setTo(customer.getEmail());
-        message.setSubject("Central Bank | Appointment Confirmation #" + appointment.getId());
+        message.setSubject("Commerce Bank | Appointment Confirmation #" + appointment.getId());
         message.setText("""
                 Dear %s,
 
-                Thank you for scheduling with Central Bank. Your appointment is now confirmed.
+                Thank you for scheduling with Commerce Bank. Your appointment is now confirmed.
 
                 ------------------------------------------------------------
                 APPOINTMENT DETAILS
@@ -61,7 +61,7 @@ public class SmtpAppointmentEmailService implements AppointmentEmailService {
                 If you need to reschedule or cancel, please use the appointment portal.
 
                 Sincerely,
-                Central Bank Client Services
+                Commerce Bank Client Services
                 This is an automated service message. Please do not reply.
                 """.formatted(
                 customer.getFullName(),

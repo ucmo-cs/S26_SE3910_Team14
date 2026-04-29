@@ -36,7 +36,7 @@ export default function NavBar() {
     <header className="border-b border-slate-200 bg-white">
       <div className="mx-auto flex w-full max-w-5xl items-center justify-between px-4 py-3">
         <div className="flex items-center gap-4">
-          <span className="text-sm font-semibold tracking-wide text-blue-900">CENTRAL BANK</span>
+          <span className="text-sm font-semibold tracking-wide text-blue-900">COMMERCE BANK</span>
           <nav className="flex gap-2">
             {navItems.map((item) => {
               const isActive = location.pathname === item.to;
