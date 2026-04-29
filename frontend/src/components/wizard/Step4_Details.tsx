@@ -29,20 +29,12 @@ export default function Step4Details({ onSubmitted }: Step4DetailsProps) {
       return;
     }
 
-    const shouldHydrate =
-      !customerDetails.firstName.trim() &&
-      !customerDetails.lastName.trim() &&
-      !customerDetails.email.trim();
-    if (!shouldHydrate) {
-      return;
-    }
-
     setCustomerDetails({
       firstName: user.firstName ?? '',
       lastName: user.lastName ?? '',
       email: user.email ?? '',
     });
-  }, [user, customerDetails.firstName, customerDetails.lastName, customerDetails.email, setCustomerDetails]);
+  }, [user, setCustomerDetails]);
 
   const canSubmit =
     selectedTopic &&
@@ -83,21 +75,7 @@ export default function Step4Details({ onSubmitted }: Step4DetailsProps) {
       <header className="space-y-2">
         <h2 className="text-2xl font-semibold text-blue-900">Enter Contact Details</h2>
         <p className="text-sm text-slate-600">Provide your contact information to confirm.</p>
-        {user ? (
-          <button
-            type="button"
-            onClick={() =>
-              setCustomerDetails({
-                firstName: user.firstName ?? '',
-                lastName: user.lastName ?? '',
-                email: user.email ?? '',
-              })
-            }
-            className="rounded-md border border-slate-200 px-3 py-1.5 text-xs font-medium text-slate-700 hover:bg-slate-50"
-          >
-            Use account details
-          </button>
-        ) : null}
+        {user ? <p className="text-xs text-slate-500">Using your account details for this booking.</p> : null}
       </header>
 
       <form onSubmit={handleSubmit} className="space-y-4">
@@ -111,6 +89,7 @@ export default function Step4Details({ onSubmitted }: Step4DetailsProps) {
                 setCustomerDetails({ ...customerDetails, firstName: event.target.value })
               }
               className="w-full rounded-lg border border-slate-200 px-3 py-2 text-slate-900 shadow-sm outline-none transition focus:border-blue-900 focus:ring-2 focus:ring-slate-300"
+              disabled={Boolean(user)}
               required
             />
           </label>
@@ -123,6 +102,7 @@ export default function Step4Details({ onSubmitted }: Step4DetailsProps) {
                 setCustomerDetails({ ...customerDetails, lastName: event.target.value })
               }
               className="w-full rounded-lg border border-slate-200 px-3 py-2 text-slate-900 shadow-sm outline-none transition focus:border-blue-900 focus:ring-2 focus:ring-slate-300"
+              disabled={Boolean(user)}
               required
             />
           </label>
@@ -135,6 +115,7 @@ export default function Step4Details({ onSubmitted }: Step4DetailsProps) {
             value={customerDetails.email}
             onChange={(event) => setCustomerDetails({ ...customerDetails, email: event.target.value })}
             className="w-full rounded-lg border border-slate-200 px-3 py-2 text-slate-900 shadow-sm outline-none transition focus:border-blue-900 focus:ring-2 focus:ring-slate-300"
+            disabled={Boolean(user)}
             required
           />
         </label>

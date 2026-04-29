@@ -26,6 +26,8 @@ import java.util.Locale;
 @Order(100)
 public class DemoIdentityBootstrap implements ApplicationRunner {
     private static final String DEMO_PASSWORD = "password";
+    // Reserved for anonymous public-booking fallback identity.
+    private static final long PUBLIC_BOOKING_FALLBACK_USER_ID = 99L;
 
     private final BranchRepository branchRepository;
     private final RoleRepository roleRepository;
@@ -57,6 +59,7 @@ public class DemoIdentityBootstrap implements ApplicationRunner {
     @Transactional
     public void run(ApplicationArguments args) {
         alignIdentitySequence("users");
+        ensurePublicBookingFallbackUser();
 
         Branch branch = branchRepository.findByActiveTrueOrderByDisplayNameAsc().stream()
                 .findFirst()
@@ -147,5 +150,30 @@ public class DemoIdentityBootstrap implements ApplicationRunner {
                         """.formatted(tableName))
                 .setParameter("tableName", tableName)
                 .getSingleResult();
+    }
+
+    private void ensurePublicBookingFallbackUser() {
+        if (userRepository.existsById(PUBLIC_BOOKING_FALLBACK_USER_ID)) {
+            return;
+        }
+        Role customerRole = findRole("ROLE_CUSTOMER");
+        Branch branch = branchRepository.findByActiveTrueOrderByDisplayNameAsc().stream()
+                .findFirst()
+                .orElseThrow(() -> new IllegalStateException("No active branch found for fallback identity setup"));
+
+        User fallbackUser = new User();
+        fallbackUser.setId(PUBLIC_BOOKING_FALLBACK_USER_ID);
+        fallbackUser.setBranch(branch);
+        fallbackUser.setRole(customerRole);
+        fallbackUser.setUsername("public.booking.fallback");
+        fallbackUser.setFirstName("Public");
+        fallbackUser.setLastName("Booking");
+        fallbackUser.setFullName("Public Booking");
+        fallbackUser.setEmailNormalized("public-booking-fallback@local.invalid");
+        fallbackUser.setPasswordHash("NO_LOGIN_BOOKING_ONLY");
+        fallbackUser.setActive(true);
+        fallbackUser.setAccountLocked(false);
+        fallbackUser.setFailedLoginAttempts(0);
+        userRepository.save(fallbackUser);
     }
 }
